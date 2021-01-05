@@ -45,6 +45,7 @@ function ContasPagar() {
     const getData = async () => {
       try {
         //Get apagar details
+        // console.log("this is running", appState.currentDate, "current", appState.lastDate, "last Date");
 
         const resPagar = await Axios.get("http://localhost:5000/pagarTabela", {
           params: {
@@ -53,7 +54,7 @@ function ContasPagar() {
           }
         });
         const jsonPagarTab = await [...resPagar.data];
-        // console.log(jsonPagarTab)
+        // console.log(jsonPagarTab, "Your data");
         setPagarTabela(jsonPagarTab);
 
         let fornecedores = {};

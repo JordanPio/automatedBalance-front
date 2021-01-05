@@ -226,6 +226,8 @@ function ContasPagas() {
         // console.log(datas);
         // Old Style Set datas
         // setDatas(datas);
+        // console.log(pgs)
+        // console.log(pgsDetalhes)
 
         setState(draft => {
           draft.pgsContas = pgs;
@@ -246,80 +248,83 @@ function ContasPagas() {
 
   return (
     <>
-      <div className="container mt-4">
+      <h2 className="mt-4 text-center"> Analise Despesas ate {`${new Date(appState.lastDate).getDate()}/${new Date(appState.lastDate).getMonth() + 1}/${new Date(appState.lastDate).getFullYear()}`}</h2>
+      <div className="row mt-4">
         <div className="col">
-          <h6 className="mt-4 text-center"> Despesas Mes {appState.lastDate}</h6>
+          <h6 className="mt-4 text-center"> Despesas Mes </h6>
 
           <Bar data={barContas} options={options} />
         </div>
-        <div className="col">
+        <div className="col table-responsive">
           <h6 className="mt-4 text-center"> Despesas Mes</h6>
 
           <Line data={chartConta} />
         </div>
-        <div className="row">
-          <div className="col">
-            <h4 className="mt-4 text-center"> Analise Despesas </h4>
-            <table className="table table-sm table-bordered table-hover mt-4">
-              <thead>
-                <tr>
-                  <th>Contas</th>
-                  {state.pgsDatas.map(items => (
-                    <th key={uid()}>{`${new Date(items).getDate()}/${new Date(items).getMonth() + 1}/${new Date(items).getFullYear()}`}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {state.pgsContas.map(e => (
-                  <tr key={uid()} className="table-plain">
-                    <td className="text-nowrap font-weight-bold" data-toggle="collapse" data-target={`.${e.conta.slice(0, 3)}`} aria-expanded="true" aria-controls={e.conta}>
-                      {e.conta}
+      </div>
 
-                      {state.pgsDescricao.map(det => {
-                        if (det.conta === e.conta) {
-                          return (
-                            <div key={uid()} id={det.descricao} className={`${e.conta.slice(0, 3)} collapse font-weight-light text-dark text-lowercase`} aria-labelledby={e.conta}>
-                              {det.descricao}
-                            </div>
-                          );
-                        } else {
-                          return null;
-                        }
-                      })}
-                    </td>
-                    {state.pgsDatas.map(data =>
-                      e[data] ? (
-                        <td key={uid()} data-toggle="collapse" data-target={`.${e.conta.slice(0, 3)}`} aria-expanded="false" aria-controls={e.conta}>
-                          R${formNumb(e[data])}
-                          {state.pgsDescricao.map(detalhe => {
-                            if (detalhe.conta === e.conta) {
-                              if (detalhe[data] > 0) {
-                                return (
-                                  <div key={uid()} id={detalhe.descricao} className={`${e.conta.slice(0, 3)} collapse`} aria-labelledby={`${e.conta}`}>
-                                    R${formNumb(detalhe[data])}
-                                  </div>
-                                );
-                              } else {
-                                return (
-                                  <div key={uid()} id={detalhe.descricao} className={`${e.conta.slice(0, 3)} collapse`} aria-labelledby={`${e.conta}`}>
-                                    R$0
-                                  </div>
-                                );
-                              }
-                            } else {
-                              return null;
-                            }
-                          })}
-                        </td>
-                      ) : (
-                        <td key={uid()}></td>
-                      )
-                    )}
-                  </tr>
+      {/* Tabela  */}
+
+      <div className="row">
+        <div className="col">
+          <table className="table table-sm table-bordered table-hover mt-4">
+            <thead>
+              <tr>
+                <th>Contas</th>
+                {state.pgsDatas.map(items => (
+                  <th key={uid()}>{`${new Date(items).getDate()}/${new Date(items).getMonth() + 1}/${new Date(items).getFullYear()}`}</th>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            </thead>
+            <tbody>
+              {state.pgsContas.map(e => (
+                <tr key={uid()} className="table-plain">
+                  <td className="text-nowrap font-weight-bold" data-toggle="collapse" data-target={`.${e.conta.slice(0, 4)}`} aria-expanded="true" aria-controls={e.conta}>
+                    {e.conta}
+
+                    {state.pgsDescricao.map(det => {
+                      if (det.conta === e.conta) {
+                        return (
+                          <div key={uid()} id={det.descricao} className={`${e.conta.slice(0, 4)} collapse font-weight-light text-dark text-lowercase`} aria-labelledby={e.conta}>
+                            {det.descricao}
+                          </div>
+                        );
+                      } else {
+                        return null;
+                      }
+                    })}
+                  </td>
+                  {state.pgsDatas.map(data =>
+                    e[data] ? (
+                      <td key={uid()} data-toggle="collapse" data-target={`.${e.conta.slice(0, 4)}`} aria-expanded="false" aria-controls={e.conta}>
+                        R${formNumb(e[data])}
+                        {state.pgsDescricao.map(detalhe => {
+                          if (detalhe.conta === e.conta) {
+                            if (detalhe[data] > 0) {
+                              return (
+                                <div key={uid()} id={detalhe.descricao} className={`${e.conta.slice(0, 4)} collapse`} aria-labelledby={`${e.conta}`}>
+                                  R${formNumb(detalhe[data])}
+                                </div>
+                              );
+                            } else {
+                              return (
+                                <div key={uid()} id={detalhe.descricao} className={`${e.conta.slice(0, 4)} collapse`} aria-labelledby={`${e.conta}`}>
+                                  R$0
+                                </div>
+                              );
+                            }
+                          } else {
+                            return null;
+                          }
+                        })}
+                      </td>
+                    ) : (
+                      <td key={uid()}></td>
+                    )
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </>

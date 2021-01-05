@@ -223,9 +223,9 @@ function VendasDados() {
 
   return (
     <>
-      <div className="container mt-4">
+      {/* <div className="container mt-4"> */}
         <div className="row">
-          <div className="col">
+          <div className="col table-responsive">
             <h3 className="mt-4">Dados</h3>
             <h6 className="mt-4">Vendas Total: R${formNumb(detalhes.vendastotal)}</h6>
             <h6 className="mt-4">Loja Fisica: R${formNumb(detalhes.vendasLojaFisica)}</h6>
@@ -247,9 +247,9 @@ function VendasDados() {
             <Doughnut data={lucroChart} />
           </div>
         </div>
-      </div>
+      {/* </div> */}
       {/* Have to do a bit manual to ensure its always the same */}
-      <div className="container">
+      {/* <div className="container"> */}
         <div className="row mt-1">
           <div className="col table-responsive mt-2">
             <h3 className="mt-2">DRE </h3>
@@ -344,7 +344,7 @@ function VendasDados() {
             </table>
           </div>
         </div>
-      </div>
+      {/* </div> */}
     </>
   );
 }

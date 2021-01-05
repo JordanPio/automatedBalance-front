@@ -81,6 +81,8 @@ function EditBalance(props) {
         });
         const jsonData = await [...response.data];
 
+        console.log(jsonData);
+
         let newObj = {};
         let newSet = [];
         for (let i = 0; i < jsonData.length; i++) {
@@ -120,7 +122,9 @@ function EditBalance(props) {
           });
           // appDispatch({ type: "flashMessage", value: "Post was updated." });
           console.log(response.data);
-          props.history.goBack();
+          // props.history.goBack();
+          props.history.push(`/`);
+          // window.location.reload(); // works like a charm but its reloading the page SOLUTION 1
         } catch (error) {
           console.log("There was an error");
         }

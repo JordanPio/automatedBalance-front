@@ -2,7 +2,6 @@ import React, { Fragment } from "react";
 import ReactDOM from "react-dom";
 import { BrowserRouter, Switch, Route } from "react-router-dom";
 
-
 // import "./App.css";
 import ContasPagas from "./AnaliseModules/ContasPagas";
 import DispatchContext from "./DispatchContext";
@@ -88,12 +87,13 @@ function App() {
         <DispatchContext.Provider value={dispatch}>
           <BrowserRouter>
             <div className="mx-auto px-5">
-            <Header />
+              <Header />
               <Switch>
                 <Route path="/" exact>
                   <BalanceSheet />
-                  <CashFlow />
                   <VendasDados />
+                  <CashFlow />
+
                   <ContasPagar />
                   <ContasReceber />
                   <ContasPagas />

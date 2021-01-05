@@ -6,7 +6,6 @@ import { useImmer } from "use-immer";
 import StateContext from "../StateContext";
 import DispatchContext from "../DispatchContext";
 import { Link } from "react-router-dom";
-// import VendasDados from "./AnaliseModules/VendasDados";
 
 const dtConvert = require("date-fns");
 
@@ -40,40 +39,16 @@ function BalanceSheet() {
     });
   }
 
-  let chartNumb = [];
   let chartDados = [];
 
-  state.dadosPivot
-    .filter(items => {
-      if (items.conta === "CAPITAL SOCIAL") {
-        return items;
-      } else {
-        return null;
-      }
-    })
-    .map(items =>
-      state.datas.map(datas => {
-        if (datas.select === true) {
-          if (items[datas.data] !== undefined) {
-            chartNumb.push(items[datas.data].f1);
-          } else {
-            chartNumb.push("Error");
-          }
-          return items;
-        } else {
-          return null;
-        }
-      })
-    );
+  if (state.analysis.crescPeriodo) {
+    console.log(state.analysis.crescPeriodo);
 
-  for (let i = chartNumb.length - 1; i >= 0; i--) {
-    if (chartNumb[i - 1]) {
-      let calc = chartNumb[i] - chartNumb[i - 1];
-      chartDados.unshift(calc.toFixed(2));
-    } else {
-      let calc = 59155.27;
-      chartDados.unshift(calc.toFixed(2));
-    }
+    state.datas.forEach(datas => {
+      state.analysis.crescPeriodo[datas.data] !==undefined ? chartDados.push(state.analysis.crescPeriodo[datas.data].toFixed(2)) : null
+    });
+    // console.log(chartDados);
+
   }
 
   let chartLab = [];
@@ -95,7 +70,7 @@ function BalanceSheet() {
         label: "Crecimento em Patrimonio Liquido",
         data: chartDados,
         borderColor: "#3e95cd",
-        fill: false
+        fill: true
       }
     ]
   };
@@ -346,7 +321,7 @@ function BalanceSheet() {
         }
       });
       const balanceData = await [...getBalance.data];
-      // console.log(balanceData) // check if data is coming correct
+      console.log(balanceData); // check if data is coming correct
 
       let dataBal = [];
       balanceData.forEach(items => {
@@ -361,7 +336,7 @@ function BalanceSheet() {
           items.conta === "Projeto 2019 Expansao Empresa (Fluxo Caixa)" ||
           items.conta.includes("Gastos com Cart") ||
           items.conta === "Produto fora Garantia que empresa Arcou" ||
-          items.conta === "Alugueis" ||
+          items.conta === "Aluguéis" ||
           items.conta === "Salarios á Pagar"
         ) {
           createBalData["tipo"] = items.tipo;
@@ -370,7 +345,7 @@ function BalanceSheet() {
           createBalData["data"] = currentDate;
         } else if (
           items.conta === "Cheque que nao tinha sido lancado no sistema" || //
-          items.conta.includes("Commiss") ||
+          items.conta === "Comissões" ||
           items.conta === "Cheques" ||
           items.conta === "Bancos (Clique no Link)" ||
           items.conta === "Cartoes em outros bancos(HIPERCARD)" ||
@@ -502,14 +477,13 @@ function BalanceSheet() {
                     </tr>
                   ) : null
                 )}
-                
               </tbody>
             </table>
             <h3 className="mt-5">Realizavel Longo Prazo</h3>
 
             <table className="table table-striped table-sm mt-4"></table>
 
-            <h3 className="mt-4">Ativo Circulante</h3>
+            <h3 className="mt-4">Ativo Permanente</h3>
             <table className="table table-striped table-sm mt-4 ">
               <thead>
                 <tr>
@@ -630,74 +604,58 @@ function BalanceSheet() {
             )}
           </tr>
         </thead>
+
         <tbody>
-          {/* TOTAL do Ativo*/}
           <tr key={uid()}>
             <td>Total do Ativo</td>
             {state.totais.Ativo ? state.datas.map(datas => (datas.select === true ? <td key={uid()}>R${state.totais.Ativo[datas.data].toLocaleString()}</td> : null)) : null}
           </tr>
-          {/* Analysis Data */}
+
           {state.analysis.circulante ? (
             <tr key={uid()}>
               <td>Liquidez Geral</td>
-              {state.datas.map(datas => (datas.select === true ? <td key={uid()}>R${state.analysis.liquidezGeral[datas.data].toLocaleString()}</td> : null))}
+              {state.datas.map(datas => (datas.select === true && state.analysis.liquidezGeral[datas.data] !== undefined ? <td key={uid()}>R${state.analysis.liquidezGeral[datas.data].toLocaleString()}</td> : null))}
             </tr>
           ) : null}
           {state.analysis.circulante ? (
             <tr key={uid()}>
               <td>Liquidez Seca</td>
-              {state.datas.map(datas => (datas.select === true ? <td key={uid()}>R${state.analysis.circulante[datas.data].toLocaleString()}</td> : null))}
+              {state.datas.map(datas => (datas.select === true && state.analysis.circulante[datas.data] !== undefined ? <td key={uid()}>R${state.analysis.circulante[datas.data].toLocaleString()}</td> : null))}
             </tr>
           ) : null}
           {state.analysis.circulante ? (
             <tr key={uid()}>
               <td>Crescimento Periodo</td>
-              {state.datas.map(datas => (datas.select === true ? <td key={uid()}>R${state.analysis.crescPeriodo[datas.data].toLocaleString()}</td> : null))}
+              {state.datas.map(datas => (datas.select === true && state.analysis.crescPeriodo[datas.data] !== undefined ? <td key={uid()}>R${state.analysis.crescPeriodo[datas.data].toLocaleString()}</td> : null))}
             </tr>
           ) : null}
           {state.analysis.circulante ? (
             <tr key={uid()}>
               <td>Periodo</td>
-              {state.datas.map(datas => (datas.select === true ? <td key={uid()}>{state.analysis.mesPeriodo[datas.data].toLocaleString()} Meses</td> : null))}
+              {state.datas.map(datas => (datas.select === true && state.analysis.mesPeriodo[datas.data] !== undefined ? <td key={uid()}>{state.analysis.mesPeriodo[datas.data].toLocaleString()} Meses</td> : null))}
             </tr>
           ) : null}
           {state.analysis.circulante ? (
             <tr key={uid()}>
               <td>Lucro Mensal</td>
-              {state.datas.map(datas => (datas.select === true ? <td key={uid()}>R${state.analysis.lucroMensal[datas.data].toLocaleString()}</td> : null))}
+              {state.datas.map(datas => (datas.select === true && state.analysis.lucroMensal[datas.data] !== undefined ? <td key={uid()}>R${state.analysis.lucroMensal[datas.data].toLocaleString()}</td> : null))}
             </tr>
           ) : null}
-          {/* Dados Antigos  Depois deletar*/}
-          {/* {state.dadosPivot.map((items, index) =>
-            items.tipo === "Analise" && items.conta !== "CRESCIMENTO EM PATRIMONIO LIQUIDO" && items.conta !== "Meses de um Periodo ao Outro" ? (
-              <tr key={uid()}>
-                <td>{items.conta}</td>
-                {state.datas.map(datas => (datas.select === true ? items[datas.data] !== undefined ? <td key={items[datas.data].f2}>R${items[datas.data].f1.toLocaleString()}</td> : <td key={uid()}>R$0</td> : null))}
-              </tr>
-            ) : items.conta === "CRESCIMENTO EM PATRIMONIO LIQUIDO" ? (
-              <tr className="font-weight-bold table-info" key={uid()}>
-                <td>{items.conta}</td>
-                {chartDados.map(dados => (
-                  <td key={uid()}>R${dados}</td>
-                ))}
-              </tr>
-            ) : null
-          )} */}
         </tbody>
       </table>
 
       {/* // GRAPH STARTS HERE */}
 
-      <div className="container">
+      {/* <div className="container"> */}
         <div className="row">
           <div className="col">
             <Line data={chartData} />
           </div>
 
-          <div className="col"></div>
+          <div className="col">
+          </div>
         </div>
-      </div>
-      {/* <VendasDados /> */}
+      {/* </div> */}
     </>
   );
 }
