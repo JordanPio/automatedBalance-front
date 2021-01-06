@@ -81,7 +81,7 @@ function EditBalance(props) {
         });
         const jsonData = await [...response.data];
 
-        console.log(jsonData);
+        // console.log(jsonData);
 
         let newObj = {};
         let newSet = [];

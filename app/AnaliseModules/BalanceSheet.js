@@ -42,13 +42,12 @@ function BalanceSheet() {
   let chartDados = [];
 
   if (state.analysis.crescPeriodo) {
-    console.log(state.analysis.crescPeriodo);
+    // console.log(state.analysis.crescPeriodo);
 
     state.datas.forEach(datas => {
-      state.analysis.crescPeriodo[datas.data] !==undefined ? chartDados.push(state.analysis.crescPeriodo[datas.data].toFixed(2)) : null
+      state.analysis.crescPeriodo[datas.data] !== undefined ? chartDados.push(state.analysis.crescPeriodo[datas.data].toFixed(2)) : null;
     });
     // console.log(chartDados);
-
   }
 
   let chartLab = [];
@@ -80,10 +79,12 @@ function BalanceSheet() {
   useEffect(() => {
     const getData = async () => {
       try {
+        // console.log("Primeiro useEffect");
+        // console.log(appState, "YOUR STATE IS HERE");
         //get Balance Data
         const response = await fetch("http://localhost:5000/balance");
         const jsonData = await response.json();
-        // console.log(jsonData, "raw data")
+        // console.log(jsonData, "raw json data")
         // set contas
 
         let newSet = [];
@@ -136,21 +137,21 @@ function BalanceSheet() {
 
         newSet.forEach(items => {
           if (items.tipo === "Ativo Circulante") {
-            // console.log(items)
+            // console.log(items, "Ativo Circulante and here WAS THE ISSUE");
             datas.forEach(data => {
               // console.log(items[data].f1)
-              totais["Ativo Circulante"][data] = totais["Ativo Circulante"][data] + items[data].f1;
+              items[data] !== undefined ? (totais["Ativo Circulante"][data] = totais["Ativo Circulante"][data] + items[data].f1) : (totais["Ativo Circulante"][data] = totais["Ativo Circulante"][data] + 0);
             });
           } else if (items.tipo === "Ativo Permanente") {
-            // console.log(items)
+            // console.log(items, "Ativo Permanente");
             datas.forEach(data => {
               // console.log(items[data].f1)
               totais["Ativo Permanente"][data] = totais["Ativo Permanente"][data] + items[data].f1;
             });
           } else if (items.tipo === "Passivo Circulante") {
-            // console.log(items)
+            // console.log(items, "Passivo Circulante");
             datas.forEach(data => {
-              // console.log(items[data], "does it exist", data)
+              // console.log(items[data], "does it exist", data);
               if (items[data] !== undefined) {
                 totais["Passivo Circulante"][data] = totais["Passivo Circulante"][data] + items[data].f1;
               } else {
@@ -158,10 +159,10 @@ function BalanceSheet() {
               }
             });
           } else if (items.tipo === "Passivo Exigivel a Longo Prazo") {
-            // console.log(items)
+            // console.log(items, "Passivo Exigivel a Longo Prazo");
             datas.forEach(data => {
               // console.log(items[data].f1)
-              // console.log(items[data], "does it exist", data)
+              // console.log(items[data], "does it exist", data);
               if (items[data] !== undefined) {
                 // console.log(items[data].f1, "WE are at final");
                 totais["Passivo Exigivel a Longo Prazo"][data] = totais["Passivo Exigivel a Longo Prazo"][data] + items[data].f1;
@@ -183,7 +184,7 @@ function BalanceSheet() {
           totais["Passivo"][data] = totais["Patrimonio Liquido"][data] + totais["Passivo Circulante"][data] + totais["Passivo Exigivel a Longo Prazo"][data];
         });
 
-        // console.log(datas, "Datas aqui");
+        // console.log(totais, "totais dataset");
 
         // SET Unique Dates
 
@@ -191,7 +192,7 @@ function BalanceSheet() {
           return { id: uid(), data: items, select: true };
         });
 
-        // console.log(uniqDates);
+        // console.log(uniqDates, "uniqDates very important");
         // // Update state to pass to other components - this may not be needed
         let lastDate = uniqDates.slice(-1)[0].data;
         let secondLastDate = uniqDates.slice(-2)[0].data;
@@ -209,7 +210,7 @@ function BalanceSheet() {
       }
     };
     getData();
-  }, [appState.currentDate]);
+  }, [appState.updateComponent]);
 
   useEffect(() => {
     if (state.sendCount) {
@@ -292,8 +293,9 @@ function BalanceSheet() {
     try {
       let lastDate = await state.datas.slice(-1)[0].data;
       // let secondLastDate = await state.datas.slice(-2)[0].data;
-      let currentDate = "2020-12-14";
-      // let currentDate = await dtConvert.format(new Date(), "yyyy-MM-dd"); // correct
+      // let currentDate = "2020-12-14"; // Forced from last balance
+      // console.log(currentDate, lastDate, "Those are the dates when updating");
+      let currentDate = await dtConvert.format(new Date(), "yyyy-MM-dd"); // currentDate
       let currentDateScrape = await dtConvert.format(new Date(), "dd-MM-yyyy");
       let lastDateScrape = await dtConvert.format(parse(lastDate, "yyyy-MM-dd", new Date()), "dd-MM-yyyy");
       // check if secondLastDate = currentDate so we dont need to run the script and just dispatch the thing
@@ -305,13 +307,13 @@ function BalanceSheet() {
       // // //
 
       // // // Scrape Data from markup system
-      // const res = await Axios.post("http://localhost:5000/scrapeAll", { lastDate, currentDate, lastDateScrape, currentDateScrape }, { timeout: 0 })
-      //   .then(resp => {
-      //     console.log(resp.data);
-      //   })
-      //   .catch(err => {
-      //     console.log(err.data);
-      //   });
+      const res = await Axios.post("http://localhost:5000/scrapeAll", { lastDate, currentDate, lastDateScrape, currentDateScrape }, { timeout: 0 })
+        .then(resp => {
+          console.log(resp.data);
+        })
+        .catch(err => {
+          console.log(err.data);
+        });
 
       // //  Get some of the old Data to add to the newBalance as they stay the same (Ativo Performanente, Alugueis e etc)
 
@@ -321,7 +323,7 @@ function BalanceSheet() {
         }
       });
       const balanceData = await [...getBalance.data];
-      console.log(balanceData); // check if data is coming correct
+      // console.log(balanceData, "check BalanceData"); // check if data is coming correct
 
       let dataBal = [];
       balanceData.forEach(items => {
@@ -370,11 +372,11 @@ function BalanceSheet() {
       const sendData = await Axios.post("http://localhost:5000/insertBalance", { dataBal }, { timeout: 0 })
         .then(resp => {
           if (sendData.data) {
-            console.log(sendData.data);
+            console.log(sendData.data, "response back from server");
           }
         })
         .catch(err => {
-          console.log(err.data);
+          console.log(err.data, "error");
         });
 
       // console.log(lastDateScrape);
@@ -647,14 +649,13 @@ function BalanceSheet() {
       {/* // GRAPH STARTS HERE */}
 
       {/* <div className="container"> */}
-        <div className="row">
-          <div className="col">
-            <Line data={chartData} />
-          </div>
-
-          <div className="col">
-          </div>
+      <div className="row">
+        <div className="col">
+          <Line data={chartData} />
         </div>
+
+        <div className="col"></div>
+      </div>
       {/* </div> */}
     </>
   );

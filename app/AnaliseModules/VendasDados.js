@@ -2,13 +2,13 @@ import React, { useEffect, useState, useContext } from "react";
 import { Doughnut } from "react-chartjs-2";
 import Axios from "axios";
 import StateContext from "../StateContext";
-// import DispatchContext from "../../DispatchContext";
+import DispatchContext from "../DispatchContext";
 
 function VendasDados() {
   const [detalhes, setDetalhes] = useState([]);
   const [pagasTabela, setPagasTabela] = useState([]);
   const appState = useContext(StateContext);
-  // const appDispatch = useContext(DispatchContext);
+  const appDispatch = useContext(DispatchContext);
 
   let lastDate = appState.lastDate;
   let secondLastDate = appState.secondLastDate;
@@ -198,19 +198,22 @@ function VendasDados() {
 
         if (currentDate.length > 0) {
           // console.log("Test to send only updated Estoque Data");
+
           // appDispatch({ type: "balanco", value: { tipo: "Ativo Circulante", conta: "Estoques", total: "Test" } }); // ao inves de fazer o balanco adicionar dados pra db ?
           // // Send data straight to database when update details
           const estoqueData = await Axios.post("http://localhost:5000/insertBalance", { data: { tipo: "Ativo Circulante", conta: "Estoques", total: vd.estoque, date: currentDate } }, { timeout: 0 })
             // const sendData = await Axios.post("http://localhost:5000/insertBalance", { data1, dataBal }, { timeout: 0 }) // correct
             .then(resp => {
-              if (estoqueData.data) {
-                console.log(estoqueData.data);
+              if (resp) {
+                console.log(resp.data, "response");
               }
               // if resp.data = something we update state - this will automatically-re render the component
             })
             .catch(err => {
-              console.log(err.data);
+              console.log(err, "Adding new Estoque data");
             });
+          await appDispatch({ type: "trackVendasDados", value: 1 });
+          // await console.log(appState.updateComponent, "Check through Estoque");
         }
 
         setDetalhes(vd);
@@ -224,126 +227,126 @@ function VendasDados() {
   return (
     <>
       {/* <div className="container mt-4"> */}
-        <div className="row">
-          <div className="col table-responsive">
-            <h3 className="mt-4">Dados</h3>
-            <h6 className="mt-4">Vendas Total: R${formNumb(detalhes.vendastotal)}</h6>
-            <h6 className="mt-4">Loja Fisica: R${formNumb(detalhes.vendasLojaFisica)}</h6>
-            <h6 className="mt-4">Loja Online: R${formNumb(detalhes.vendasOnline)}</h6>
-            <h6 className="mt-4">Estoque Atual: R${formNumb(detalhes.estoque)}</h6>
-            <h6 className="mt-4">Lucro Liquido Sob Faturamento: {detalhes.lucroSobFaturamento}%</h6>
-            <h6 className="mt-4">Lucro Bruto Sob Faturamento B2W: {detalhes.lucroSobFaturamentoB2W}%</h6>
-            <h6 className="mt-4">Lucro Bruto Sob Faturamento Magazine: {detalhes.lucroSobFaturamentoMagazine}%</h6>
-            <h6 className="mt-4">Lucro Bruto Sob Faturamento Fisica: {detalhes.lucroSobFaturamentoFisica}%</h6>
-          </div>
-          <div className="col">
-            <h6 className="mt-4 text-center">% Vendas</h6>
-
-            <Doughnut data={vendasChart} />
-          </div>
-          <div className="col">
-            <h6 className="mt-4 text-center"> Lucro</h6>
-
-            <Doughnut data={lucroChart} />
-          </div>
+      <div className="row">
+        <div className="col table-responsive">
+          <h3 className="mt-4">Dados</h3>
+          <h6 className="mt-4">Vendas Total: R${formNumb(detalhes.vendastotal)}</h6>
+          <h6 className="mt-4">Loja Fisica: R${formNumb(detalhes.vendasLojaFisica)}</h6>
+          <h6 className="mt-4">Loja Online: R${formNumb(detalhes.vendasOnline)}</h6>
+          <h6 className="mt-4">Estoque Atual: R${formNumb(detalhes.estoque)}</h6>
+          <h6 className="mt-4">Lucro Liquido Sob Faturamento: {detalhes.lucroSobFaturamento}%</h6>
+          <h6 className="mt-4">Lucro Bruto Sob Faturamento B2W: {detalhes.lucroSobFaturamentoB2W}%</h6>
+          <h6 className="mt-4">Lucro Bruto Sob Faturamento Magazine: {detalhes.lucroSobFaturamentoMagazine}%</h6>
+          <h6 className="mt-4">Lucro Bruto Sob Faturamento Fisica: {detalhes.lucroSobFaturamentoFisica}%</h6>
         </div>
+        <div className="col">
+          <h6 className="mt-4 text-center">% Vendas</h6>
+
+          <Doughnut data={vendasChart} />
+        </div>
+        <div className="col">
+          <h6 className="mt-4 text-center"> Lucro</h6>
+
+          <Doughnut data={lucroChart} />
+        </div>
+      </div>
       {/* </div> */}
       {/* Have to do a bit manual to ensure its always the same */}
       {/* <div className="container"> */}
-        <div className="row mt-1">
-          <div className="col table-responsive mt-2">
-            <h3 className="mt-2">DRE </h3>
+      <div className="row mt-1">
+        <div className="col table-responsive mt-2">
+          <h3 className="mt-2">DRE </h3>
 
-            <table className="table table-striped table-sm table-hover mt-4">
-              <thead>
-                <tr>
-                  <th>Lancamento</th>
-                  <th>Data</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>(=) Receita Total de Vendas</td>
-                  <td>R${formNumb(detalhes.vendastotal)}</td>
-                </tr>
-                <tr>
-                  <td>(-) Devolucoes</td>
-                  <td>R${formNumb(detalhes.devoTotal + detalhes.devoB2W)}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <h6>(=) Receita Bruta de Vendas </h6>
-                  </td>
-                  <td>R${formNumb(detalhes.vendasBruta)}</td>
-                </tr>
-                <tr>
-                  <td>(-) Total CMV</td>
-                  <td>R${formNumb(detalhes.totalCMV)}</td>
-                </tr>
-                <tr>
-                  <td>(-) Impostos NF</td>
-                  <td>R${formNumb(detalhes.imposto)}</td>
-                </tr>
-                <tr>
-                  <td>(-) Taxas B2W</td>
-                  <td>R${formNumb(detalhes.taxasB2W)}</td>
-                </tr>
-                <tr>
-                  <td>(-) Taxas Magazine Luiza</td>
-                  <td>R${formNumb(detalhes.taxasMagazineLuiza)}</td>
-                </tr>
-                <tr>
-                  <td>(-) Taxas Mercado Pago</td>
-                  <td>R${formNumb(detalhes.taxasMercadoPago)}</td>
-                </tr>
-                <tr>
-                  <td>(-) Frete B2W</td>
-                  <td>R${formNumb(detalhes.freteB2W)}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <h6>(=) Total Lucro Bruto</h6>
-                  </td>
-                  <td>R${formNumb(detalhes.lucroBruto)}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <h6>(=) Despesas Operacionais</h6>
-                  </td>
-                  <td>R${formNumb(detalhes.totalPagas)}</td>
-                </tr>
-                <tr>
-                  <td>
-                    <h6>(=) Total Lucro Liquido</h6>
-                  </td>
-                  <td>R${formNumb(detalhes.lucroLiquido)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div className="col table-responsive mt-2">
-            <h6 className="mt-4 mb-2">Despesas Operacionais </h6>
-
-            <table className="table table-striped table-sm table-hover mt-4">
-              <thead>
-                <tr>
-                  <th>Conta</th>
-                  <th>Total</th>
-                  <th>% Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagasTabela.map(items => (
-                  <tr key={uid()}>
-                    <td>{items.conta}</td>
-                    <td>R${formNumb(items.total)}</td>
-                    <td>{formNumb(items.percenttotal * 100)}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <table className="table table-striped table-sm table-hover mt-4">
+            <thead>
+              <tr>
+                <th>Lancamento</th>
+                <th>Data</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>(=) Receita Total de Vendas</td>
+                <td>R${formNumb(detalhes.vendastotal)}</td>
+              </tr>
+              <tr>
+                <td>(-) Devolucoes</td>
+                <td>R${formNumb(detalhes.devoTotal + detalhes.devoB2W)}</td>
+              </tr>
+              <tr>
+                <td>
+                  <h6>(=) Receita Bruta de Vendas </h6>
+                </td>
+                <td>R${formNumb(detalhes.vendasBruta)}</td>
+              </tr>
+              <tr>
+                <td>(-) Total CMV</td>
+                <td>R${formNumb(detalhes.totalCMV)}</td>
+              </tr>
+              <tr>
+                <td>(-) Impostos NF</td>
+                <td>R${formNumb(detalhes.imposto)}</td>
+              </tr>
+              <tr>
+                <td>(-) Taxas B2W</td>
+                <td>R${formNumb(detalhes.taxasB2W)}</td>
+              </tr>
+              <tr>
+                <td>(-) Taxas Magazine Luiza</td>
+                <td>R${formNumb(detalhes.taxasMagazineLuiza)}</td>
+              </tr>
+              <tr>
+                <td>(-) Taxas Mercado Pago</td>
+                <td>R${formNumb(detalhes.taxasMercadoPago)}</td>
+              </tr>
+              <tr>
+                <td>(-) Frete B2W</td>
+                <td>R${formNumb(detalhes.freteB2W)}</td>
+              </tr>
+              <tr>
+                <td>
+                  <h6>(=) Total Lucro Bruto</h6>
+                </td>
+                <td>R${formNumb(detalhes.lucroBruto)}</td>
+              </tr>
+              <tr>
+                <td>
+                  <h6>(=) Despesas Operacionais</h6>
+                </td>
+                <td>R${formNumb(detalhes.totalPagas)}</td>
+              </tr>
+              <tr>
+                <td>
+                  <h6>(=) Total Lucro Liquido</h6>
+                </td>
+                <td>R${formNumb(detalhes.lucroLiquido)}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
+        <div className="col table-responsive mt-2">
+          <h6 className="mt-4 mb-2">Despesas Operacionais </h6>
+
+          <table className="table table-striped table-sm table-hover mt-4">
+            <thead>
+              <tr>
+                <th>Conta</th>
+                <th>Total</th>
+                <th>% Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pagasTabela.map(items => (
+                <tr key={uid()}>
+                  <td>{items.conta}</td>
+                  <td>R${formNumb(items.total)}</td>
+                  <td>{formNumb(items.percenttotal * 100)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
       {/* </div> */}
     </>
   );

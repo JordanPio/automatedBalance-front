@@ -42,7 +42,11 @@ function App() {
     currentDate: [],
     lastDateScrape: [],
     currentDateScrape: [],
-    NewBalanceData: []
+    NewBalanceData: [],
+    updateComponent: {
+      vendasDados: 0,
+      contasPagar: 0
+    }
   };
 
   function ourReducer(draft, action) {
@@ -74,6 +78,12 @@ function App() {
         return;
       case "balanco":
         draft.NewBalanceData.push(action.value);
+        return;
+      case "trackVendasDados":
+        draft.updateComponent.vendasDados = action.value;
+        return;
+      case "trackContasPagar":
+        draft.updateComponent.contasPagar = action.value;
         return;
     }
   }
