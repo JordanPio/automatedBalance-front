@@ -6,6 +6,7 @@ import { useImmer } from "use-immer";
 import StateContext from "../StateContext";
 import DispatchContext from "../DispatchContext";
 import { Link } from "react-router-dom";
+import { addDays } from "date-fns/esm";
 
 const dtConvert = require("date-fns");
 
@@ -291,114 +292,121 @@ function BalanceSheet() {
 
   async function createBal() {
     try {
-      let lastDate = await state.datas.slice(-1)[0].data;
+      // // // Only run the balance if currentDate >= lastBalance date + 30 days
+
+      // Get the dates to use in the new balance
       // let secondLastDate = await state.datas.slice(-2)[0].data;
-      // let currentDate = "2020-12-14"; // Forced from last balance
-      // console.log(currentDate, lastDate, "Those are the dates when updating");
+      let lastDate = await state.datas.slice(-1)[0].data;
       let currentDate = await dtConvert.format(new Date(), "yyyy-MM-dd"); // currentDate
       let currentDateScrape = await dtConvert.format(new Date(), "dd-MM-yyyy");
       let lastDateScrape = await dtConvert.format(parse(lastDate, "yyyy-MM-dd", new Date()), "dd-MM-yyyy");
-      // check if secondLastDate = currentDate so we dont need to run the script and just dispatch the thing
-      // console.log(currentDate);
-      // if (lastDate === currentDate) {
-      //   console.log('i am here')
-      // }
 
-      // // //
+      // let currentDate = "2020-12-14"; // Forced from last balance
+      // let currentDate = "2020-02-04"; // check to test if condition is working
 
-      // // // Scrape Data from markup system
-      const res = await Axios.post("http://localhost:5000/scrapeAll", { lastDate, currentDate, lastDateScrape, currentDateScrape }, { timeout: 0 })
-        .then(resp => {
-          console.log(resp.data);
-        })
-        .catch(err => {
-          console.log(err.data);
-        });
+      // calculate 30days from lastBalance (To be used in if Condition)
+      let daysAhead = new Date(lastDate);
+      daysAhead.setDate(daysAhead.getDate() + 30);
+      // convert variable date back to string! we are comparing string to string as this is used in database
+      daysAhead = await dtConvert.format(daysAhead, "yyyy-MM-dd", new Date());
+      // console.log(currentDate, lastDate, daysAhead, "Those are the dates when updating"); // check data variables
 
-      // //  Get some of the old Data to add to the newBalance as they stay the same (Ativo Performanente, Alugueis e etc)
+      // // // OTHER EXAMPLE OF HOW TO DEAL WITH DATES USING date-fsn package! Slower performance
+      // // let lastDateConvert = await dtConvert.parse(lastDate, "yyyy-MM-dd", new Date());
+      // // let dateCheck = await dtConvert.format(addDays(lastDateConvert, 30), "yyyy-MM-dd", new Date());
+      // // let dateCheck = await dtConvert.format(addDays(lastDateConvert, 30), "yyyy-MM-dd", new Date());
 
-      const getBalance = await Axios.get("http://localhost:5000/edit", {
-        params: {
-          date: lastDate
-        }
-      });
-      const balanceData = await [...getBalance.data];
-      // console.log(balanceData, "check BalanceData"); // check if data is coming correct
+      // // check if lastBalance was done in currentDate or currentDate > 30 days from last balance
+      // // if True do not run the script and show msg, otherwise run the DataScrape
 
-      let dataBal = [];
-      balanceData.forEach(items => {
-        let createBalData = {};
+      if (lastDate !== currentDate && currentDate >= daysAhead) {
+        // console.log("i am here", daysAhead);
 
-        // console.log(items); // check what is inside the data
-        if (
-          items.tipo === "Ativo Permanente" || //
-          items.conta === "Junior Investimento na Empresa" ||
-          items.conta === "Junior Participacao Lucro a receber (REF Periodo 2016 a 2017)" ||
-          items.conta === "Paulo Participacao Lucro" ||
-          items.conta === "Projeto 2019 Expansao Empresa (Fluxo Caixa)" ||
-          items.conta.includes("Gastos com Cart") ||
-          items.conta === "Produto fora Garantia que empresa Arcou" ||
-          items.conta === "Aluguéis" ||
-          items.conta === "Salarios á Pagar"
-        ) {
-          createBalData["tipo"] = items.tipo;
-          createBalData["conta"] = items.conta;
-          createBalData["total"] = items.total;
-          createBalData["data"] = currentDate;
-        } else if (
-          items.conta === "Cheque que nao tinha sido lancado no sistema" || //
-          items.conta === "Comissões" ||
-          items.conta === "Cheques" ||
-          items.conta === "Bancos (Clique no Link)" ||
-          items.conta === "Cartoes em outros bancos(HIPERCARD)" ||
-          items.conta === "Caixa (Dinheiro Gaveta, a depositar, Caixa dia)" ||
-          items.conta === "Devolucoes B2W" ||
-          items.conta === "Conta Mercado Pago e Paypal ou B2W" ||
-          items.conta === "RMA a Enviar + RMA A RECEBER( Enviado e em Credito)" ||
-          items.conta === "Cartoes a Receber (VISA, MASTERCARD) https://portal.stone.com.br/" ||
-          items.conta === "Dinheiro que ainda não entraram (Meio Termo, em transito para cair na conta)"
-        ) {
-          createBalData["tipo"] = items.tipo;
-          createBalData["conta"] = items.conta;
-          createBalData["total"] = 0.123;
-          createBalData["data"] = currentDate;
-        }
-        if (Object.keys(createBalData).length > 0) {
-          dataBal.push(createBalData);
-        }
-      });
+        // // //
 
-      // Insert data into Balance database
-      const sendData = await Axios.post("http://localhost:5000/insertBalance", { dataBal }, { timeout: 0 })
-        .then(resp => {
-          if (sendData.data) {
-            console.log(sendData.data, "response back from server");
+        // // Scrape Data from markup system
+        const res = await Axios.post("http://localhost:5000/scrapeAll", { lastDate, currentDate, lastDateScrape, currentDateScrape }, { timeout: 0 })
+          .then(resp => {
+            console.log(resp.data);
+          })
+          .catch(err => {
+            console.log(err.data);
+          });
+
+        // //
+
+        // //  Get some of the old Data to add to the newBalance as they stay the same (Ativo Performanente, Alugueis e etc)
+
+        const getBalance = await Axios.get("http://localhost:5000/edit", {
+          params: {
+            date: lastDate
           }
-        })
-        .catch(err => {
-          console.log(err.data, "error");
+        });
+        const balanceData = await [...getBalance.data];
+        // console.log(balanceData, "check BalanceData"); // check if data is coming correct
+
+        let dataBal = [];
+        balanceData.forEach(items => {
+          let createBalData = {};
+
+          // console.log(items); // check what is inside the data
+          if (
+            items.tipo === "Ativo Permanente" || //
+            items.conta === "Junior Investimento na Empresa" ||
+            items.conta === "Junior Participacao Lucro a receber (REF Periodo 2016 a 2017)" ||
+            items.conta === "Paulo Participacao Lucro" ||
+            items.conta === "Projeto 2019 Expansao Empresa (Fluxo Caixa)" ||
+            items.conta.includes("Gastos com Cart") ||
+            items.conta === "Produto fora Garantia que empresa Arcou" ||
+            items.conta === "Aluguéis" ||
+            items.conta === "Salarios á Pagar"
+          ) {
+            createBalData["tipo"] = items.tipo;
+            createBalData["conta"] = items.conta;
+            createBalData["total"] = items.total;
+            createBalData["data"] = currentDate;
+          } else if (
+            items.conta === "Cheque que nao tinha sido lancado no sistema" || //
+            items.conta === "Comissões" ||
+            items.conta === "Cheques" ||
+            items.conta === "Bancos (Clique no Link)" ||
+            items.conta === "Cartoes em outros bancos(HIPERCARD)" ||
+            items.conta === "Caixa (Dinheiro Gaveta, a depositar, Caixa dia)" ||
+            items.conta === "Devolucoes B2W" ||
+            items.conta === "Conta Mercado Pago e Paypal ou B2W" ||
+            items.conta === "RMA a Enviar + RMA A RECEBER( Enviado e em Credito)" ||
+            items.conta === "Cartoes a Receber (VISA, MASTERCARD) https://portal.stone.com.br/" ||
+            items.conta === "Dinheiro que ainda não entraram (Meio Termo, em transito para cair na conta)"
+          ) {
+            createBalData["tipo"] = items.tipo;
+            createBalData["conta"] = items.conta;
+            createBalData["total"] = 0.123;
+            createBalData["data"] = currentDate;
+          }
+          if (Object.keys(createBalData).length > 0) {
+            dataBal.push(createBalData);
+          }
         });
 
-      // console.log(lastDateScrape);
+        // Insert data into Balance database
+        const sendData = await Axios.post("http://localhost:5000/insertBalance", { dataBal }, { timeout: 0 })
+          .then(resp => {
+            if (sendData.data) {
+              console.log(sendData.data, "response back from server");
+            }
+          })
+          .catch(err => {
+            console.log(err.data, "error");
+          });
 
-      // access server with post
-
-      // send the data in State to database - this will be done in the useEffect down below now
-
-      // console.log(dataBal, "Balanco"); // create an array
-      // appDispatch({type: 'balanco', value: dataBal})
-      // Scrape new data
-      // if Scrape succesfull then create new queries based on it otherwise queries keep the second last value
-      // scrape shold try few times
-      // scrape should display error message where the issue is
-      // the button should display an icon generating new balance
-      // // uncomment this section to update without run the script
-
-      // Update Dates at Global to update other components
-      console.log("Start Updating other Components");
-      // await appDispatch({ type: "secondLastDate", value: appState.lastDate });
-      await appDispatch({ type: "lastDate", value: lastDate });
-      await appDispatch({ type: "currentDate", value: currentDate });
+        // Update Dates at Global to update other components
+        console.log("Start Updating other Components");
+        // await appDispatch({ type: "secondLastDate", value: appState.lastDate });
+        await appDispatch({ type: "lastDate", value: lastDate });
+        await appDispatch({ type: "currentDate", value: currentDate });
+      } else {
+        console.log("E muito cedo para rodar outro Balanco, data corrente menor que 30 dias");
+      }
 
       // Update State to Re-Enable Button
       setState(draft => {
