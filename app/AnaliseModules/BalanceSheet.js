@@ -7,6 +7,7 @@ import StateContext from "../StateContext";
 import DispatchContext from "../DispatchContext";
 import { Link } from "react-router-dom";
 import { addDays } from "date-fns/esm";
+import VendasDados from "./VendasDados";
 
 const dtConvert = require("date-fns");
 
@@ -103,6 +104,7 @@ function BalanceSheet() {
         totais["Patrimonio Liquido"] = {};
         totais["Capital Social"] = {};
         totais["Lucro Exercicio"] = {};
+        totais["DifAtivPassiv"] = {};
 
         for (let i = 0; i < jsonData.length; i++) {
           datas = Object.keys(jsonData[i].json_object_agg);
@@ -128,6 +130,7 @@ function BalanceSheet() {
             totais["Patrimonio Liquido"][nome] = 0;
             totais["Capital Social"][nome] = 0;
             totais["Lucro Exercicio"][nome] = 0;
+            totais["DifAtivPassiv"][nome] = 0;
           }
           // outside the loop execute this for when the dataset outro is ready
           newSet.push(outro);
@@ -137,6 +140,7 @@ function BalanceSheet() {
         // Calculated Fields
 
         newSet.forEach(items => {
+          // console.log(items.conta)
           if (items.tipo === "Ativo Circulante") {
             // console.log(items, "Ativo Circulante and here WAS THE ISSUE");
             datas.forEach(data => {
@@ -159,6 +163,27 @@ function BalanceSheet() {
                 totais["Passivo Circulante"][data] = totais["Passivo Circulante"][data] + 0;
               }
             });
+          } else if (items.tipo === "Patrimonio Liquido" || items.tipo === "Profit Loss") {
+            // console.log(items, "Passivo Exigivel a Longo Prazo");
+            datas.forEach(data => {
+              // console.log(items[data].f1)
+              // console.log(items[data], "does it exist", data);
+              if (items[data] !== undefined) {
+                // console.log(items[data].f1, "WE are at final");
+                totais["Patrimonio Liquido"][data] = totais["Patrimonio Liquido"][data] + items[data].f1;
+                if (items.conta === "Lucro Prejuizo do Exercicio") {
+                  // console.log(items[data].f1, "WE are at final", data);
+                  totais["Lucro Exercicio"][data] = totais["Lucro Exercicio"][data] + items[data].f1;
+                }
+              } else {
+                totais["Patrimonio Liquido"][data] = totais["Patrimonio Liquido"][data] + 0;
+
+                if (items.conta === "Lucro Prejuizo do Exercicio") {
+                  totais["Lucro Exercicio"][data] = totais["Lucro Exercicio"][data] + 0;
+                  // console.log("I fell here", data, items[data]);
+                }
+              }
+            });
           } else if (items.tipo === "Passivo Exigivel a Longo Prazo") {
             // console.log(items, "Passivo Exigivel a Longo Prazo");
             datas.forEach(data => {
@@ -174,15 +199,17 @@ function BalanceSheet() {
           }
         });
 
+        // console.log(totais, datas);
         // // Calculate Capita Social e Patrimonio Liquido
         datas.forEach(data => {
           // console.log(data);
           totais["Ativo"][data] = totais["Ativo Circulante"][data] + totais["Ativo Permanente"][data];
           // totais["Capital Social"][data] = 20000;
-          totais["Capital Social"][data] = totais["Ativo"][data] - (totais["Passivo Circulante"][data] + totais["Passivo Exigivel a Longo Prazo"][data]);
+          // totais["Lucro Liquido"][data] = totais["Ativo"][data] - (totais["Passivo Circulante"][data] + totais["Passivo Exigivel a Longo Prazo"][data]);
           // totais["Lucro Exercicio"][data] = totais["Ativo"][data] - (totais["Passivo Circulante"][data] + totais["Passivo Exigivel a Longo Prazo"][data] + totais["Capital Social"][data]);
-          totais["Patrimonio Liquido"][data] = totais["Lucro Exercicio"][data] + totais["Capital Social"][data];
+          // totais["Patrimonio Liquido"][data] = totais["Lucro Exercicio"][data] + totais["Capital Social"][data];
           totais["Passivo"][data] = totais["Patrimonio Liquido"][data] + totais["Passivo Circulante"][data] + totais["Passivo Exigivel a Longo Prazo"][data];
+          totais["DifAtivPassiv"][data] = totais["Ativo"][data] - totais["Passivo"][data];
         });
 
         // console.log(totais, "totais dataset");
@@ -197,6 +224,7 @@ function BalanceSheet() {
         // // Update state to pass to other components - this may not be needed
         let lastDate = uniqDates.slice(-1)[0].data;
         let secondLastDate = uniqDates.slice(-2)[0].data;
+        // console.log(lastDate, secondLastDate, "from balance");
 
         await appDispatch({ type: "secondLastDate", value: secondLastDate });
         await appDispatch({ type: "lastDate", value: lastDate });
@@ -251,7 +279,9 @@ function BalanceSheet() {
 
           // // Diferenca entre AtivoCirc - Passivo Circulante por periodo
           // // te da uma ideia de como esta as financas da empresa
-          crescPeriodo[datas[i].data] = state.totais["Ativo"][datas[i].data] - state.totais["Passivo Circulante"][datas[i].data] - (state.totais["Ativo"][datas[i - 1].data] - state.totais["Passivo Circulante"][datas[i - 1].data]);
+          crescPeriodo[datas[i].data] = state.totais["Lucro Exercicio"][datas[i].data];
+          // console.log(state.totais["Lucro Exercicio"][datas[i].data], "Crescimento")
+          // console.log(datas[i]);
 
           // // (TOTAL Ativo - Passivo circulante) - periodo anterior
           // // isso da uma ideia de quanto cresce seu patrimonio pois a retirada dos socios nao conta (lancado no exigivel a longo prazo)
@@ -270,11 +300,11 @@ function BalanceSheet() {
           // console.log(crescAtivo, "Periodo = ");
         } else if (datas[i].select === true) {
           circulante[datas[i].data] = state.totais["Ativo Circulante"][datas[i].data] - state.totais["Passivo Circulante"][datas[i].data];
-          crescPeriodo[datas[i].data] = 0;
+          crescPeriodo[datas[i].data] = state.totais["Lucro Exercicio"][datas[i].data];
           liquidezGeral[datas[i].data] = state.totais["Ativo"][datas[i].data] - state.totais["Passivo Circulante"][datas[i].data];
 
-          mesPeriodo[datas[i].data] = 0;
-          lucroMensal[datas[i].data] = 0;
+          mesPeriodo[datas[i].data] = 22;
+          lucroMensal[datas[i].data] = crescPeriodo[datas[i].data] / mesPeriodo[datas[i].data];
         }
       }
       analysis.circulante = circulante;
@@ -297,12 +327,12 @@ function BalanceSheet() {
       // Get the dates to use in the new balance
       // let secondLastDate = await state.datas.slice(-2)[0].data;
       let lastDate = await state.datas.slice(-1)[0].data;
-      let currentDate = await dtConvert.format(new Date(), "yyyy-MM-dd"); // currentDate
+      // let currentDate = await dtConvert.format(new Date(), "yyyy-MM-dd"); // currentDate
       let currentDateScrape = await dtConvert.format(new Date(), "dd-MM-yyyy");
       let lastDateScrape = await dtConvert.format(parse(lastDate, "yyyy-MM-dd", new Date()), "dd-MM-yyyy");
 
       // let currentDate = "2020-12-14"; // Forced from last balance
-      // let currentDate = "2020-02-04"; // check to test if condition is working
+      let currentDate = "2021-01-06"; // check to test if condition is working
 
       // calculate 30days from lastBalance (To be used in if Condition)
       let daysAhead = new Date(lastDate);
@@ -325,13 +355,13 @@ function BalanceSheet() {
         // // //
 
         // // Scrape Data from markup system
-        const res = await Axios.post("http://localhost:5000/scrapeAll", { lastDate, currentDate, lastDateScrape, currentDateScrape }, { timeout: 0 })
-          .then(resp => {
-            console.log(resp.data);
-          })
-          .catch(err => {
-            console.log(err.data);
-          });
+        // const res = await Axios.post("http://localhost:5000/scrapeAll", { lastDate, currentDate, lastDateScrape, currentDateScrape }, { timeout: 0 })
+        //   .then(resp => {
+        //     console.log(resp.data);
+        //   })
+        //   .catch(err => {
+        //     console.log(err.data);
+        //   });
 
         // //
 
@@ -358,8 +388,11 @@ function BalanceSheet() {
             items.conta === "Projeto 2019 Expansao Empresa (Fluxo Caixa)" ||
             items.conta.includes("Gastos com Cart") ||
             items.conta === "Produto fora Garantia que empresa Arcou" ||
-            items.conta === "Aluguéis" ||
-            items.conta === "Salarios á Pagar"
+            items.conta === "Alugueis" ||
+            items.conta === "Salarios Pagar" ||
+            items.conta === "Stock Reserva de Lucro" ||
+            items.conta === "Capital Social" ||
+            items.conta === "Total Reservas de Lucro"
           ) {
             createBalData["tipo"] = items.tipo;
             createBalData["conta"] = items.conta;
@@ -367,20 +400,24 @@ function BalanceSheet() {
             createBalData["data"] = currentDate;
           } else if (
             items.conta === "Cheque que nao tinha sido lancado no sistema" || //
-            items.conta === "Comissões" ||
+            items.conta === "Comissoes" ||
             items.conta === "Cheques" ||
-            items.conta === "Bancos (Clique no Link)" ||
+            items.conta === "Bancos Dinheiro" ||
             items.conta === "Cartoes em outros bancos(HIPERCARD)" ||
-            items.conta === "Caixa (Dinheiro Gaveta, a depositar, Caixa dia)" ||
+            items.conta === "Caixa Gaveta" ||
             items.conta === "Devolucoes B2W" ||
-            items.conta === "Conta Mercado Pago e Paypal ou B2W" ||
-            items.conta === "RMA a Enviar + RMA A RECEBER( Enviado e em Credito)" ||
-            items.conta === "Cartoes a Receber (VISA, MASTERCARD) https://portal.stone.com.br/" ||
-            items.conta === "Dinheiro que ainda não entraram (Meio Termo, em transito para cair na conta)"
+            items.conta === "Conta Mercado Pago e Paypal" ||
+            items.conta === "RMA a Enviar e RECEBER" ||
+            items.conta === "Cartoes a Receber VISA MASTERCARD" ||
+            items.conta === "Lucro Prejuizo do Exercicio" ||
+            items.conta === "Retirada Socios" ||
+            items.conta === "Reserva de Lucro" ||
+            items.conta === "Prejuizo" ||
+            items.conta === "Dinheiro (Depositos nao compensados)"
           ) {
             createBalData["tipo"] = items.tipo;
             createBalData["conta"] = items.conta;
-            createBalData["total"] = 0.123;
+            createBalData["total"] = 0.01;
             createBalData["data"] = currentDate;
           }
           if (Object.keys(createBalData).length > 0) {
@@ -589,14 +626,21 @@ function BalanceSheet() {
                   <td>Total do Patrimonio Liquido</td>
                   {state.totais["Patrimonio Liquido"] ? state.datas.map(datas => (datas.select === true ? <td key={uid()}>R${state.totais["Patrimonio Liquido"][datas.data].toLocaleString()}</td> : null)) : null}
                 </tr>
-                <tr key={uid()}>
-                  <td>Capital Social</td>
-                  {state.totais["Capital Social"] ? state.datas.map(datas => (datas.select === true ? <td key={uid()}>R${state.totais["Capital Social"][datas.data].toLocaleString()}</td> : null)) : null}
-                </tr>
-                <tr key={uid()}>
-                  <td>Lucro Exercicio</td>
-                  {state.totais["Lucro Exercicio"] ? state.datas.map(datas => (datas.select === true ? <td key={uid()}>R${state.totais["Lucro Exercicio"][datas.data].toLocaleString()}</td> : null)) : null}
-                </tr>
+                {state.dadosPivot.map((items, index) =>
+                  items.tipo === "Patrimonio Liquido" ? (
+                    <tr key={uid()}>
+                      <td>{items.conta}</td>
+
+                      {state.datas.map(datas => (datas.select === true ? items[datas.data] !== undefined ? <td key={items[datas.data].f2}>R${items[datas.data].f1.toLocaleString()}</td> : <td key={uid()}>R$0</td> : null))}
+                    </tr>
+                  ) : items.tipo === "Profit Loss" ? (
+                    <tr key={uid()}>
+                      <td>{items.conta}</td>
+
+                      {state.datas.map(datas => (datas.select === true ? items[datas.data] !== undefined ? <td key={items[datas.data].f2}>R${items[datas.data].f1.toLocaleString()}</td> : <td key={uid()}>R$0</td> : null))}
+                    </tr>
+                  ) : null
+                )}
               </tbody>
             </table>
           </div>
@@ -651,6 +695,12 @@ function BalanceSheet() {
               {state.datas.map(datas => (datas.select === true && state.analysis.lucroMensal[datas.data] !== undefined ? <td key={uid()}>R${state.analysis.lucroMensal[datas.data].toLocaleString()}</td> : null))}
             </tr>
           ) : null}
+          {state.totais.DifAtivPassiv ? (
+            <tr key={uid()}>
+              <td>Ativo - Passivo</td>
+              {state.datas.map(datas => (datas.select === true && state.totais.DifAtivPassiv[datas.data] !== undefined ? <td key={uid()}>R${state.totais.DifAtivPassiv[datas.data].toLocaleString()}</td> : null))}
+            </tr>
+          ) : null}
         </tbody>
       </table>
 
@@ -664,6 +714,7 @@ function BalanceSheet() {
 
         <div className="col"></div>
       </div>
+      <VendasDados state={state.datas}/>
       {/* </div> */}
     </>
   );

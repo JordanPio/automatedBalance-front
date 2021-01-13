@@ -137,160 +137,240 @@ function EditBalance(props) {
   }, [state.sendCount]);
 
   return (
-    <Page title="Edit Balance">
-      <h3 className="text-center p-5">Atualizar Balanco</h3>
+    <div title="Edit Balance" className="mx-auto">
+      <h3 className="text-center p-5">Atualizar Balanco {`${new Date(state.date).getDate()}/${new Date(state.date).getMonth() + 1}/${new Date(state.date).getFullYear()}`}</h3>
+
       {/* <div className="container"> */}
       <form onSubmit={submitHandler} className="text-center">
-        <div className="form-group">
-          <h5 className="form-inline mx-3">Contas Ativo</h5>
-          {state.dados.map((items, itemsIndex) => {
-            if (items.tipo.includes("Ativo")) {
-              return (
-                <div key={items.id} className="form-inline">
-                  <label className="mx-3">{items.conta} R$:</label>
-                  <input
-                    name="Total"
-                    className="form-control mb-2"
-                    key={itemsIndex}
-                    id={items.id}
-                    value={items.total}
-                    index={items.index}
-                    onChange={e => {
-                      let inputValue = e.target.value;
-                      let itemId = parseInt(e.target.id, 10);
-                      if (state.dados[itemsIndex].total !== inputValue) {
-                        setState(draft => {
-                          draft.dados[itemsIndex].total = inputValue;
-                        });
-                        // console.log(state.dados[itemsIndex].id, inputValue)
-                        setState(draft => {
-                          draft.changes[itemId] = parseFloat(inputValue);
-                        });
-                      }
-                    }}
-                  />
-                </div>
-              );
-            } else {
-              return null;
-            }
-          })}
-          {/* // Contas Passivo */}
-          <h5 className="form-inline mx-3 mt-3">Contas Passivo</h5>
-          {state.dados.map((items, itemsIndex) => {
-            if (items.tipo.includes("Passivo")) {
-              return (
-                <div key={items.id} className="form-inline">
-                  <label className="mx-3">{items.conta} R$:</label>
-                  <input
-                    name="Total"
-                    className="form-control mb-2"
-                    key={itemsIndex}
-                    id={items.id}
-                    value={items.total}
-                    index={items.index}
-                    onChange={e => {
-                      let inputValue = e.target.value;
-                      let itemId = parseInt(e.target.id, 10);
-                      if (state.dados[itemsIndex].total !== inputValue) {
-                        setState(draft => {
-                          draft.dados[itemsIndex].total = inputValue;
-                        });
-                        // console.log(state.dados[itemsIndex].id, inputValue)
-                        setState(draft => {
-                          draft.changes[itemId] = parseFloat(inputValue);
-                        });
-                      }
-                    }}
-                  />
-                </div>
-              );
-            } else {
-              return null;
-            }
-          })}
+        <div className="form-group ">
+          <div className="row">
+            <div className="col">
+              <h4 className="form-inline mx-3 font-weight-bold">Ativo Circulante</h4>
+              {state.dados.map((items, itemsIndex) => {
+                if (items.tipo === "Ativo Circulante") {
+                  return (
+                    <div key={items.id} className="form-inline">
+                      <label className="mx-3">{items.conta} R$:</label>
+                      <input
+                        name="Total"
+                        className="form-control mb-2"
+                        key={itemsIndex}
+                        id={items.id}
+                        value={items.total}
+                        index={items.index}
+                        onChange={e => {
+                          let inputValue = e.target.value;
+                          let itemId = parseInt(e.target.id, 10);
+                          if (state.dados[itemsIndex].total !== inputValue) {
+                            setState(draft => {
+                              draft.dados[itemsIndex].total = inputValue;
+                            });
+                            // console.log(state.dados[itemsIndex].id, inputValue)
+                            setState(draft => {
+                              draft.changes[itemId] = parseFloat(inputValue);
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                } else {
+                  return null;
+                }
+              })}
 
-          {/* // Contas Patrimonio */}
-          <h5 className="form-inline mx-3 mt-3">Contas Patrimonio</h5>
-          {state.dados.map((items, itemsIndex) => {
-            if (items.tipo.includes("Patrimonio")) {
-              return (
-                <div key={items.id} className="form-inline">
-                  <label className="mx-3">{items.conta} R$:</label>
-                  <input
-                    name="Total"
-                    className="form-control mb-2"
-                    key={itemsIndex}
-                    id={items.id}
-                    value={items.total}
-                    index={items.index}
-                    onChange={e => {
-                      let inputValue = e.target.value;
-                      let itemId = parseInt(e.target.id, 10);
-                      if (state.dados[itemsIndex].total !== inputValue) {
-                        setState(draft => {
-                          draft.dados[itemsIndex].total = inputValue;
-                        });
-                        // console.log(state.dados[itemsIndex].id, inputValue)
-                        setState(draft => {
-                          draft.changes[itemId] = parseFloat(inputValue);
-                        });
-                      }
-                    }}
-                  />
-                </div>
-              );
-            } else {
-              return null;
-            }
-          })}
+              {/* Ativo Permanente */}
+              <h4 className="form-inline mx-3 font-weight-bold">Ativo Permanente</h4>
+              {state.dados.map((items, itemsIndex) => {
+                if (items.tipo === "Ativo Permanente") {
+                  return (
+                    <div key={items.id} className="form-inline">
+                      <label className="mx-3">{items.conta} R$:</label>
+                      <input
+                        name="Total"
+                        className="form-control mb-2"
+                        key={itemsIndex}
+                        id={items.id}
+                        value={items.total}
+                        index={items.index}
+                        onChange={e => {
+                          let inputValue = e.target.value;
+                          let itemId = parseInt(e.target.id, 10);
+                          if (state.dados[itemsIndex].total !== inputValue) {
+                            setState(draft => {
+                              draft.dados[itemsIndex].total = inputValue;
+                            });
+                            // console.log(state.dados[itemsIndex].id, inputValue)
+                            setState(draft => {
+                              draft.changes[itemId] = parseFloat(inputValue);
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                } else {
+                  return null;
+                }
+              })}
+            </div>
 
-          {/* // Contas Analise */}
-          <h5 className="form-inline mx-3 mt-3">Contas Analise</h5>
-          {state.dados.map((items, itemsIndex) => {
-            if (items.tipo.includes("Analise")) {
-              return (
-                <div key={items.id} className="form-inline">
-                  <label className="mx-3">{items.conta} R$:</label>
-                  <input
-                    name="Total"
-                    className="form-control mb-2"
-                    key={itemsIndex}
-                    id={items.id}
-                    value={items.total}
-                    index={items.index}
-                    onChange={e => {
-                      let inputValue = e.target.value;
-                      let itemId = parseInt(e.target.id, 10);
-                      if (state.dados[itemsIndex].total !== inputValue) {
-                        setState(draft => {
-                          draft.dados[itemsIndex].total = inputValue;
-                        });
-                        // console.log(state.dados[itemsIndex].id, inputValue)
-                        setState(draft => {
-                          draft.changes[itemId] = parseFloat(inputValue);
-                        });
-                      }
-                    }}
-                  />
-                </div>
-              );
-            } else {
-              return null;
-            }
-          })}
+            {/* // Contas Passivo */}
+            <div className="col">
+              <h4 className="form-inline mx-3 mt-3 font-weight-bold">Contas Passivo</h4>
+              {state.dados.map((items, itemsIndex) => {
+                if (items.tipo.includes("Passivo Circulante")) {
+                  return (
+                    <div key={items.id} className="form-inline">
+                      <label className="mx-3">{items.conta} R$:</label>
+                      <input
+                        name="Total"
+                        className="form-control mb-2"
+                        key={itemsIndex}
+                        id={items.id}
+                        value={items.total}
+                        index={items.index}
+                        onChange={e => {
+                          let inputValue = e.target.value;
+                          let itemId = parseInt(e.target.id, 10);
+                          if (state.dados[itemsIndex].total !== inputValue) {
+                            setState(draft => {
+                              draft.dados[itemsIndex].total = inputValue;
+                            });
+                            // console.log(state.dados[itemsIndex].id, inputValue)
+                            setState(draft => {
+                              draft.changes[itemId] = parseFloat(inputValue);
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                } else {
+                  return null;
+                }
+              })}
+
+              {/* Exigivel Longo Prazo */}
+              <h4 className="form-inline mx-3 mt-3 font-weight-bold">Exigivel Longo Prazo</h4>
+              {state.dados.map((items, itemsIndex) => {
+                if (items.tipo.includes("Passivo Exigivel")) {
+                  return (
+                    <div key={items.id} className="form-inline">
+                      <label className="mx-3">{items.conta} R$:</label>
+                      <input
+                        name="Total"
+                        className="form-control mb-2"
+                        key={itemsIndex}
+                        id={items.id}
+                        value={items.total}
+                        index={items.index}
+                        onChange={e => {
+                          let inputValue = e.target.value;
+                          let itemId = parseInt(e.target.id, 10);
+                          if (state.dados[itemsIndex].total !== inputValue) {
+                            setState(draft => {
+                              draft.dados[itemsIndex].total = inputValue;
+                            });
+                            // console.log(state.dados[itemsIndex].id, inputValue)
+                            setState(draft => {
+                              draft.changes[itemId] = parseFloat(inputValue);
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                } else {
+                  return null;
+                }
+              })}
+
+              {/* // Contas Patrimonio */}
+              <h4 className="form-inline mx-3 mt-3 font-weight-bold">Contas Patrimonio</h4>
+              {state.dados.map((items, itemsIndex) => {
+                if (items.tipo.includes("Patrimonio")) {
+                  return (
+                    <div key={items.id} className="form-inline">
+                      <label className="mx-3">{items.conta} R$:</label>
+                      <input
+                        name="Total"
+                        className="form-control mb-2"
+                        key={itemsIndex}
+                        id={items.id}
+                        value={items.total}
+                        index={items.index}
+                        onChange={e => {
+                          let inputValue = e.target.value;
+                          let itemId = parseInt(e.target.id, 10);
+                          if (state.dados[itemsIndex].total !== inputValue) {
+                            setState(draft => {
+                              draft.dados[itemsIndex].total = inputValue;
+                            });
+                            // console.log(state.dados[itemsIndex].id, inputValue)
+                            setState(draft => {
+                              draft.changes[itemId] = parseFloat(inputValue);
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                } else {
+                  return null;
+                }
+              })}
+
+              {/* // Contas Patrimonio */}
+              <h3 className="form-inline mx-3 mt-3 font-weight-bold">Lucro / Prejuizo</h3>
+              {state.dados.map((items, itemsIndex) => {
+                if (items.tipo.includes("Profit")) {
+                  return (
+                    <div key={items.id} className="form-inline">
+                      <label className="mx-3">{items.conta} R$:</label>
+                      <input
+                        name="Total"
+                        className="form-control mb-2"
+                        key={itemsIndex}
+                        id={items.id}
+                        value={items.total}
+                        index={items.index}
+                        onChange={e => {
+                          let inputValue = e.target.value;
+                          let itemId = parseInt(e.target.id, 10);
+                          if (state.dados[itemsIndex].total !== inputValue) {
+                            setState(draft => {
+                              draft.dados[itemsIndex].total = inputValue;
+                            });
+                            // console.log(state.dados[itemsIndex].id, inputValue)
+                            setState(draft => {
+                              draft.changes[itemId] = parseFloat(inputValue);
+                            });
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                } else {
+                  return null;
+                }
+              })}
+            </div>
+          </div>
         </div>
 
         <br />
-        <button className="btn btn-primary mb-2" disabled={state.isSaving}>
+
+        <button className="btn btn-primary mb-4" disabled={state.isSaving}>
           Save Updates
         </button>
+        <button className="btn btn-danger ml-4 mb-4 text-center" onClick={deleteHandler}>
+          Delete
+        </button>
       </form>
-      <button className="btn btn-danger mb-2 text-center" onClick={deleteHandler}>
-        Delete
-      </button>
+
       {/* </div> */}
-    </Page>
+    </div>
   );
 }
 

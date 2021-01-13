@@ -4,16 +4,37 @@ import Axios from "axios";
 import StateContext from "../StateContext";
 import DispatchContext from "../DispatchContext";
 
-function VendasDados() {
+function VendasDados(props) {
   const [detalhes, setDetalhes] = useState([]);
   const [pagasTabela, setPagasTabela] = useState([]);
   const appState = useContext(StateContext);
   const appDispatch = useContext(DispatchContext);
+  // const datesBalanco = props.state;
 
-  let lastDate = appState.lastDate;
-  let secondLastDate = appState.secondLastDate;
-  let currentDate = appState.currentDate;
+  // let lastDate = appState.lastDate; // important dont delete old style
+  // let secondLastDate = appState.secondLastDate; // important dont delete old style
+  let currentDate = appState.currentDate; // important dont delete old style
   // console.log("dates", lastDate, currentDate, secondLastDate);
+
+  let lastDate = 0;
+  let secondLastDate = 0;
+
+  // // //
+  let datesBalance = [];
+
+  if (props.state.length > 0) {
+    // console.log(props.state, "aim here");
+    props.state.forEach(items => {
+      // console.log(items);
+      if (items.select === true) {
+        datesBalance.push(items);
+      }
+    });
+    // console.log(datesBalance, "all dates");
+    lastDate = datesBalance.slice(-1)[0].data;
+    secondLastDate = datesBalance.slice(-2)[0].data; //
+    // console.log(lastDate, currentDate, secondLastDate, "these are my dates");
+  }
 
   // generate IDs
   const uid = function () {
@@ -74,7 +95,7 @@ function VendasDados() {
           }
         });
         const jsonVendas = [...responseVendas.data];
-        // console.log(jsonVendas, "Total Vendas ")
+        // console.log(jsonVendas, "Total Vendas ");
 
         const responseOnline = await Axios.get("http://localhost:5000/vendasOnline", {
           params: {
@@ -83,10 +104,17 @@ function VendasDados() {
             currentDate: currentDate
           }
         });
-        const jsonOnline = [...responseOnline.data];
-        // console.log(jsonOnline, "Vendas online ")
+        let jsonOnline = [...responseOnline.data];
+        // console.log(jsonOnline, "Vendas online ");
 
-        const totalOnline = jsonOnline.reduce((a, b) => ({ totalvendas: a.totalvendas + b.totalvendas }));
+        let totalOnline = 0;
+        if (jsonOnline.length <= 0) {
+          jsonOnline = [];
+          totalOnline = 0;
+        } else {
+          totalOnline = jsonOnline.reduce((a, b) => ({ totalvendas: a.totalvendas + b.totalvendas }));
+        }
+
         // console.log(jsonOnline, totalOnline, "2 datasets aqui"); // check
         const responseDRE = await Axios.get("http://localhost:5000/vendasdre", {
           params: {
@@ -96,7 +124,7 @@ function VendasDados() {
           }
         });
         const jsonDRE = [...responseDRE.data];
-        // console.log(jsonDRE, "venda Totais"); // check
+        // console.log(jsonDRE, "venda Totais usually comes empty"); // check usually comes empty
 
         let vd = {};
 
@@ -113,41 +141,63 @@ function VendasDados() {
         // console.log(jsonDevo, "Devolucoes"); // check
 
         const devoTotal = jsonDevo.filter(({ descricao }) => !descricao.includes("B2W")).reduce((a, b) => ({ total: a.total + b.total }));
-
+        // console.log(devoTotal)
         const devoB2W = jsonDevo.filter(({ descricao }) => descricao.includes("B2W"));
 
-        vd["devoB2W"] = devoB2W[0].total;
+        devoB2W.length > 0 ? (vd["devoB2W"] = devoB2W[0].total) : (vd["devoB2W"] = 0);
+
         vd["devoTotal"] = devoTotal.total;
 
-        vd["vendasOnline"] = totalOnline.totalvendas;
+        Object.keys(totalOnline).length > 0 ? (vd["vendasOnline"] = totalOnline.totalvendas) : (vd["vendasOnline"] = 0);
         vd["vendastotal"] = jsonVendas[0].totalvendas;
         vd["vendasBruta"] = jsonVendas[0].totalvendas - vd.devoTotal - vd.devoB2W;
-        vd["vendasLojaFisica"] = jsonVendas[0].totalvendas - totalOnline.totalvendas;
+        vd["vendasLojaFisica"] = jsonVendas[0].totalvendas - vd.vendasOnline;
         vd["percentFisica"] = ((vd["vendasLojaFisica"] / vd["vendastotal"]) * 100).toFixed(2);
         vd["percentOnline"] = ((vd.vendasOnline / vd["vendastotal"]) * 100).toFixed(2);
-        vd["estoque"] = jsonDataEstoque[0].custototal;
         vd["imposto"] = vd.vendasBruta * 0.05;
 
+        // console.log(jsonDataEstoque, "TROUBLEE"); // check
+
+        // Definir estoque
+        if (jsonDataEstoque.length > 0) {
+          vd["estoque"] = jsonDataEstoque[0].custototal;
+        } else {
+          vd["estoque"] = 0;
+        }
+
         // custom detalhes
-        jsonOnline.forEach(items => {
-          if (items.cliente === "B2W") {
-            vd["B2W"] = items.totalvendas - vd.devoB2W;
-            vd["taxasB2W"] = vd.B2W * 0.1225;
-            vd["freteB2W"] = items.totalvendas * 0.13;
-          }
-          if (items.cliente === "MAGAZINE LUIZA") {
-            vd["magazineLuiza"] = items.totalvendas;
-            vd["taxasMagazineLuiza"] = vd.magazineLuiza * 0.12;
-          }
-          if (items.cliente === "Mercado Livre") {
-            vd["mercadoPago"] = items.totalvendas;
+        // console.log(jsonOnline, "Online empty?")
+        if (jsonOnline.length > 0) {
+          jsonOnline.forEach(items => {
+            if (items.cliente === "B2W") {
+              vd["B2W"] = items.totalvendas - vd.devoB2W;
+              vd["taxasB2W"] = vd.B2W * 0.1225;
+              vd["freteB2W"] = items.totalvendas * 0.13;
+            }
+            if (items.cliente === "MAGAZINE LUIZA") {
+              vd["magazineLuiza"] = items.totalvendas;
+              vd["taxasMagazineLuiza"] = vd.magazineLuiza * 0.12;
+            }
+            if (items.cliente === "Mercado Livre") {
+              vd["mercadoPago"] = items.totalvendas;
+              vd["taxasMercadoPago"] = vd.mercadoPago * 0.05;
+            }
+          });
+
+          if (!vd.mercadoPago) {
+            vd["mercadoPago"] = 0;
             vd["taxasMercadoPago"] = vd.mercadoPago * 0.05;
           }
-        });
-
-        if (!vd.mercadoPago) {
+        } else {
+          vd["B2W"] = 0;
+          vd["taxasB2W"] = 0;
+          vd["freteB2W"] = 0;
+          vd["magazineLuiza"] = 0;
+          vd["taxasMagazineLuiza"] = 0;
           vd["mercadoPago"] = 0;
-          vd["taxasMercadoPago"] = vd.mercadoPago * 0.05;
+          vd["taxasMercadoPago"] = 0;
+          vd["mercadoPago"] = 0;
+          vd["taxasMercadoPago"] = 0;
         }
 
         // console.log(jsonOnline)
@@ -222,7 +272,7 @@ function VendasDados() {
       }
     }
     fetchData();
-  }, [lastDate, currentDate]);
+  }, [props.state, currentDate]);
 
   return (
     <>

@@ -101,7 +101,7 @@ function App() {
               <Switch>
                 <Route path="/" exact>
                   <BalanceSheet />
-                  <VendasDados />
+                  {/* <VendasDados /> */}
                   <CashFlow />
 
                   <ContasPagar />
