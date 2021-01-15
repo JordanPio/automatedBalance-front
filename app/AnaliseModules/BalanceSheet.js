@@ -275,7 +275,7 @@ function BalanceSheet() {
       for (let i = datas.length - 1; i >= 0; i--) {
         // console.log(datas[i]);
         if (datas[i].select === true && datas[i - 1] !== undefined) {
-          circulante[datas[i].data] = state.totais["Ativo Circulante"][datas[i].data] - state.totais["Passivo Circulante"][datas[i].data];
+          circulante[datas[i].data] = state.totais["Ativo Circulante"][datas[i].data] / state.totais["Passivo Circulante"][datas[i].data];
 
           // // Diferenca entre AtivoCirc - Passivo Circulante por periodo
           // // te da uma ideia de como esta as financas da empresa
@@ -285,7 +285,7 @@ function BalanceSheet() {
 
           // // (TOTAL Ativo - Passivo circulante) - periodo anterior
           // // isso da uma ideia de quanto cresce seu patrimonio pois a retirada dos socios nao conta (lancado no exigivel a longo prazo)
-          liquidezGeral[datas[i].data] = state.totais["Ativo"][datas[i].data] - state.totais["Passivo Circulante"][datas[i].data];
+          liquidezGeral[datas[i].data] = state.totais["Ativo"][datas[i].data] / state.totais["Passivo Circulante"][datas[i].data];
 
           // // qtde meses que passou entre periodo
           const d1Y = new Date(datas[i].data).getFullYear();
@@ -296,12 +296,12 @@ function BalanceSheet() {
           mesPeriodo[datas[i].data] = d1M + 12 * d1Y - (d2M + 12 * d2Y);
           lucroMensal[datas[i].data] = crescPeriodo[datas[i].data] / mesPeriodo[datas[i].data];
 
-          // console.log(liquidezGeral, crescPeriodo);
+          // console.log(state.totais, "Your totais to check");
           // console.log(crescAtivo, "Periodo = ");
         } else if (datas[i].select === true) {
-          circulante[datas[i].data] = state.totais["Ativo Circulante"][datas[i].data] - state.totais["Passivo Circulante"][datas[i].data];
+          circulante[datas[i].data] = state.totais["Ativo Circulante"][datas[i].data] / state.totais["Passivo Circulante"][datas[i].data];
           crescPeriodo[datas[i].data] = state.totais["Lucro Exercicio"][datas[i].data];
-          liquidezGeral[datas[i].data] = state.totais["Ativo"][datas[i].data] - state.totais["Passivo Circulante"][datas[i].data];
+          liquidezGeral[datas[i].data] = state.totais["Ativo"][datas[i].data] / state.totais["Passivo Circulante"][datas[i].data];
 
           mesPeriodo[datas[i].data] = 22;
           lucroMensal[datas[i].data] = crescPeriodo[datas[i].data] / mesPeriodo[datas[i].data];
@@ -327,16 +327,16 @@ function BalanceSheet() {
       // Get the dates to use in the new balance
       // let secondLastDate = await state.datas.slice(-2)[0].data;
       let lastDate = await state.datas.slice(-1)[0].data;
-      // let currentDate = await dtConvert.format(new Date(), "yyyy-MM-dd"); // currentDate
+      let currentDate = await dtConvert.format(new Date(), "yyyy-MM-dd"); // currentDate
       let currentDateScrape = await dtConvert.format(new Date(), "dd-MM-yyyy");
       let lastDateScrape = await dtConvert.format(parse(lastDate, "yyyy-MM-dd", new Date()), "dd-MM-yyyy");
 
       // let currentDate = "2020-12-14"; // Forced from last balance
-      let currentDate = "2021-01-06"; // check to test if condition is working
+      // let currentDate = "2021-01-15"; // check to test if condition is working
 
-      // calculate 30days from lastBalance (To be used in if Condition)
-      let daysAhead = new Date(lastDate);
-      daysAhead.setDate(daysAhead.getDate() + 30);
+      // calculate 30days from lastBalance (To be used in if Condition) = daysAhead
+      let daysAhead = await new Date(lastDate);
+      await daysAhead.setDate(daysAhead.getDate() + 30);
       // convert variable date back to string! we are comparing string to string as this is used in database
       daysAhead = await dtConvert.format(daysAhead, "yyyy-MM-dd", new Date());
       // console.log(currentDate, lastDate, daysAhead, "Those are the dates when updating"); // check data variables
@@ -350,18 +350,19 @@ function BalanceSheet() {
       // // if True do not run the script and show msg, otherwise run the DataScrape
 
       if (lastDate !== currentDate && currentDate >= daysAhead) {
+        // if (lastDate !== currentDate && currentDate >= daysAhead) {
         // console.log("i am here", daysAhead);
 
         // // //
 
-        // // Scrape Data from markup system
-        // const res = await Axios.post("http://localhost:5000/scrapeAll", { lastDate, currentDate, lastDateScrape, currentDateScrape }, { timeout: 0 })
-        //   .then(resp => {
-        //     console.log(resp.data);
-        //   })
-        //   .catch(err => {
-        //     console.log(err.data);
-        //   });
+        // // // Scrape Data from markup system
+        const res = await Axios.post("http://localhost:5000/scrapeAll", { lastDate, currentDate, lastDateScrape, currentDateScrape }, { timeout: 0 })
+          .then(resp => {
+            console.log(resp.data);
+          })
+          .catch(err => {
+            console.log(err.data);
+          });
 
         // //
 
@@ -376,10 +377,10 @@ function BalanceSheet() {
         // console.log(balanceData, "check BalanceData"); // check if data is coming correct
 
         let dataBal = [];
-        balanceData.forEach(items => {
+        await balanceData.forEach(items => {
           let createBalData = {};
 
-          // console.log(items); // check what is inside the data
+          // console.log(items, "Inside Balance data that will be saved"); // check what is inside the data
           if (
             items.tipo === "Ativo Permanente" || //
             items.conta === "Junior Investimento na Empresa" ||
@@ -391,8 +392,7 @@ function BalanceSheet() {
             items.conta === "Alugueis" ||
             items.conta === "Salarios Pagar" ||
             items.conta === "Stock Reserva de Lucro" ||
-            items.conta === "Capital Social" ||
-            items.conta === "Total Reservas de Lucro"
+            items.conta === "Capital Social"
           ) {
             createBalData["tipo"] = items.tipo;
             createBalData["conta"] = items.conta;
@@ -411,8 +411,11 @@ function BalanceSheet() {
             items.conta === "Cartoes a Receber VISA MASTERCARD" ||
             items.conta === "Lucro Prejuizo do Exercicio" ||
             items.conta === "Retirada Socios" ||
-            items.conta === "Reserva de Lucro" ||
-            items.conta === "Prejuizo" ||
+            items.conta === "Aumento Reserva de Lucro" ||
+            items.conta === "Aumento Capital Social" ||
+            items.conta === "Depreciacoes" ||
+            items.conta === "Reducao Reserva Lucro" ||
+            items.conta === "Reducao Capital Social" ||
             items.conta === "Dinheiro (Depositos nao compensados)"
           ) {
             createBalData["tipo"] = items.tipo;
@@ -425,30 +428,31 @@ function BalanceSheet() {
           }
         });
 
+        // console.log(dataBal, "DATABAL");
         // Insert data into Balance database
         const sendData = await Axios.post("http://localhost:5000/insertBalance", { dataBal }, { timeout: 0 })
           .then(resp => {
-            if (sendData.data) {
-              console.log(sendData.data, "response back from server");
+            if (resp.data) {
+              console.log(resp.data, "response back from server");
             }
           })
           .catch(err => {
-            console.log(err.data, "error");
+            console.log(err, "error");
           });
 
         // Update Dates at Global to update other components
-        console.log("Start Updating other Components");
+        await console.log("Start Updating other Components");
         // await appDispatch({ type: "secondLastDate", value: appState.lastDate });
         await appDispatch({ type: "lastDate", value: lastDate });
         await appDispatch({ type: "currentDate", value: currentDate });
+
+        // Update State to Re-Enable Button
+        await setState(draft => {
+          draft.isSaving = false;
+        });
       } else {
         console.log("E muito cedo para rodar outro Balanco, data corrente menor que 30 dias");
       }
-
-      // Update State to Re-Enable Button
-      setState(draft => {
-        draft.isSaving = false;
-      });
     } catch (error) {
       console.error(error.message);
     }
@@ -667,19 +671,19 @@ function BalanceSheet() {
 
           {state.analysis.circulante ? (
             <tr key={uid()}>
-              <td>Liquidez Geral</td>
-              {state.datas.map(datas => (datas.select === true && state.analysis.liquidezGeral[datas.data] !== undefined ? <td key={uid()}>R${state.analysis.liquidezGeral[datas.data].toLocaleString()}</td> : null))}
+              <td>Indice Liquidez Geral</td>
+              {state.datas.map(datas => (datas.select === true && state.analysis.liquidezGeral[datas.data] !== undefined ? <td key={uid()}>{state.analysis.liquidezGeral[datas.data].toFixed(2)}</td> : null))}
             </tr>
           ) : null}
           {state.analysis.circulante ? (
             <tr key={uid()}>
-              <td>Liquidez Seca</td>
-              {state.datas.map(datas => (datas.select === true && state.analysis.circulante[datas.data] !== undefined ? <td key={uid()}>R${state.analysis.circulante[datas.data].toLocaleString()}</td> : null))}
+              <td>Indice Liquidez Seca</td>
+              {state.datas.map(datas => (datas.select === true && state.analysis.circulante[datas.data] !== undefined ? <td key={uid()}>{state.analysis.circulante[datas.data].toFixed(2)}</td> : null))}
             </tr>
           ) : null}
           {state.analysis.circulante ? (
             <tr key={uid()}>
-              <td>Crescimento Periodo</td>
+              <td>Lucro Periodo</td>
               {state.datas.map(datas => (datas.select === true && state.analysis.crescPeriodo[datas.data] !== undefined ? <td key={uid()}>R${state.analysis.crescPeriodo[datas.data].toLocaleString()}</td> : null))}
             </tr>
           ) : null}
@@ -714,7 +718,7 @@ function BalanceSheet() {
 
         <div className="col"></div>
       </div>
-      <VendasDados state={state.datas}/>
+      <VendasDados state={state.datas} />
       {/* </div> */}
     </>
   );

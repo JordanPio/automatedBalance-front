@@ -139,10 +139,18 @@ function VendasDados(props) {
         const jsonDevo = [...resdevo.data];
         // setPagasTabela(jsonPagasT);
         // console.log(jsonDevo, "Devolucoes"); // check
+        let devoTotal = []
+        let devoB2W = []
+        if (jsonDevo.length > 0) {
+          devoTotal = jsonDevo.filter(({ descricao }) => !descricao.includes("B2W")).reduce((a, b) => ({ total: a.total + b.total }));
+          devoB2W = jsonDevo.filter(({ descricao }) => descricao.includes("B2W"));
+        } else {
+          devoTotal["total"] = 0
+          devoB2W = 0
+        }
 
-        const devoTotal = jsonDevo.filter(({ descricao }) => !descricao.includes("B2W")).reduce((a, b) => ({ total: a.total + b.total }));
-        // console.log(devoTotal)
-        const devoB2W = jsonDevo.filter(({ descricao }) => descricao.includes("B2W"));
+          // console.log(devoTotal.total, "total")
+       
 
         devoB2W.length > 0 ? (vd["devoB2W"] = devoB2W[0].total) : (vd["devoB2W"] = 0);
 
@@ -271,7 +279,8 @@ function VendasDados(props) {
         console.error(error.message);
       }
     }
-    fetchData();
+
+    props.state.length > 0 ? fetchData() : null;
   }, [props.state, currentDate]);
 
   return (
