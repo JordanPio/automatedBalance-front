@@ -1,51 +1,20 @@
 import React, { useEffect, useState, useContext } from "react";
 import { Doughnut } from "react-chartjs-2";
 import Axios from "axios";
-import StateContext from "../StateContext";
-import DispatchContext from "../DispatchContext";
 
-function VendasDados(props) {
-  const [detalhes, setDetalhes] = useState([]);
-  const [pagasTabela, setPagasTabela] = useState([]);
-  const appState = useContext(StateContext);
-  const appDispatch = useContext(DispatchContext);
-  // const datesBalanco = props.state;
+function VendasDados({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
+  const [balanceData, setBalanceData] = useState([]);
+  const [tabelaPagas, setTabelaPagas] = useState([]);
 
-  // let lastDate = appState.lastDate; // important dont delete old style
-  // let secondLastDate = appState.secondLastDate; // important dont delete old style
-  let currentDate = appState.currentDate; // important dont delete old style
-  // console.log("dates", lastDate, currentDate, secondLastDate);
-
-  let lastDate = 0;
-  let secondLastDate = 0;
-
-  // // //
-  let datesBalance = [];
-
-  if (props.state.length > 0) {
-    // console.log(props.state, "aim here");
-    props.state.forEach(items => {
-      // console.log(items);
-      if (items.select === true) {
-        datesBalance.push(items);
-      }
-    });
-    // console.log(datesBalance, "all dates");
-    lastDate = datesBalance.slice(-1)[0].data;
-    secondLastDate = datesBalance.slice(-2)[0].data; //
-    // console.log(lastDate, currentDate, secondLastDate, "these are my dates");
-  }
-
-  // generate IDs
-  const uid = function () {
+  const genRandomId = function () {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
   };
 
-  const vendasChart = {
+  const pieChartVendas = {
     labels: ["Fisica", "Online"],
     datasets: [
       {
-        data: [detalhes.percentFisica, detalhes.percentOnline],
+        data: [balanceData.percentFisica, balanceData.percentOnline],
         backgroundColor: ["#FF6384", "#36A2EB"],
         hoverBackgroundColor: ["#FF6384", "#36A2EB"]
       }
@@ -53,11 +22,11 @@ function VendasDados(props) {
     text: "23%"
   };
 
-  const lucroChart = {
+  const pieChartLucro = {
     labels: ["Loja Fisica", "B2W", "Magazine Luiza", "MercadoPago"],
     datasets: [
       {
-        data: [detalhes.lucroLojaFisica, detalhes.lucroB2W, detalhes.lucroMagazineLuiza, detalhes.lucroMercadoPago],
+        data: [balanceData.lucroLojaFisica, balanceData.lucroB2W, balanceData.lucroMagazineLuiza, balanceData.lucroMercadoPago],
         backgroundColor: ["#8e5ea2", "#3e95cd", "#3cba9f", "#FF6384"],
         hoverBackgroundColor: ["#FF6384", "#36A2EB", "#e8c3b9", "#FF6384"]
       }
@@ -65,7 +34,7 @@ function VendasDados(props) {
     text: "23%"
   };
 
-  const formNumb = function (params) {
+  const formatNumber = function (params) {
     if (typeof params === "number") {
       return params.toLocaleString(navigator.language, { maximumFractionDigits: 2 });
     } else {
@@ -74,337 +43,301 @@ function VendasDados(props) {
   };
 
   useEffect(() => {
-    async function fetchData() {
+    if (prevBalanceDate || currentBalanceDate) getVendasData();
+  }, [currentBalanceDate, newBalanceDate]);
+
+  async function getVendasData() {
+    let balanceProcessedData = {};
+
+    await (async function processDespesasData() {
       try {
-        const responseEstoque = await Axios.get("http://localhost:5000/totalEstoque", {
+        const { data: getContasPagas } = await Axios.get("http://localhost:5000/pagasTabela", {
           params: {
-            lastDate: lastDate,
-            secondLastDate: secondLastDate,
-            currentDate: currentDate
+            currentBalanceDate: currentBalanceDate,
+            prevBalanceDate: prevBalanceDate,
+            newBalanceDate: newBalanceDate
           }
         });
-        const jsonDataEstoque = [...responseEstoque.data];
-        // console.log(jsonDataEstoque, "ESTOQUE DATA") // check
+        setTabelaPagas(getContasPagas);
 
-        // // Get Vendas Details
-        const responseVendas = await Axios.get("http://localhost:5000/totalVendas", {
+        const totalPagas = getContasPagas.reduce((a, b) => ({ total: a.total + b.total }));
+        balanceProcessedData["totalPagas"] = totalPagas.total;
+      } catch (error) {
+        console.error("Error processing Despesas Data in VendasDados Component");
+      }
+    })();
+
+    await (async function processDevoData() {
+      try {
+        const { data: getDevolucoes } = await Axios.get("http://localhost:5000/devolucoes", {
           params: {
-            lastDate: lastDate,
-            secondLastDate: secondLastDate,
-            currentDate: currentDate
+            currentBalanceDate: currentBalanceDate,
+            prevBalanceDate: prevBalanceDate,
+            newBalanceDate: newBalanceDate
           }
         });
-        const jsonVendas = [...responseVendas.data];
-        // console.log(jsonVendas, "Total Vendas ");
 
-        const responseOnline = await Axios.get("http://localhost:5000/vendasOnline", {
-          params: {
-            lastDate: lastDate,
-            secondLastDate: secondLastDate,
-            currentDate: currentDate
-          }
-        });
-        let jsonOnline = [...responseOnline.data];
-        // console.log(jsonOnline, "Vendas online ");
-
-        let totalOnline = 0;
-        if (jsonOnline.length <= 0) {
-          jsonOnline = [];
-          totalOnline = 0;
+        let devoTotal = [];
+        let devoB2W = [];
+        if (getDevolucoes.length > 0) {
+          devoTotal = getDevolucoes.filter(({ descricao }) => !descricao.includes("B2W")).reduce((a, b) => ({ total: a.total + b.total }));
+          devoB2W = getDevolucoes.filter(({ descricao }) => descricao.includes("B2W"));
         } else {
-          totalOnline = jsonOnline.reduce((a, b) => ({ totalvendas: a.totalvendas + b.totalvendas }));
+          devoTotal["total"] = 0;
+          devoB2W = 0;
         }
 
-        // console.log(jsonOnline, totalOnline, "2 datasets aqui"); // check
-        const responseDRE = await Axios.get("http://localhost:5000/vendasdre", {
+        devoB2W.length > 0 ? (balanceProcessedData["devoB2W"] = devoB2W[0].total) : (balanceProcessedData["devoB2W"] = 0);
+
+        balanceProcessedData["devoTotal"] = devoTotal.total;
+      } catch (error) {
+        console.error("Error processing Devolucao Data in VendasDados Module");
+      }
+    })();
+
+    await (async function processVendasData() {
+      try {
+        const { data: getVendasOnline } = await Axios.get("http://localhost:5000/vendasOnline", {
           params: {
-            lastDate: lastDate,
-            secondLastDate: secondLastDate,
-            currentDate: currentDate
+            currentBalanceDate: currentBalanceDate,
+            prevBalanceDate: prevBalanceDate,
+            newBalanceDate: newBalanceDate
           }
         });
-        const jsonDRE = [...responseDRE.data];
-        // console.log(jsonDRE, "venda Totais usually comes empty"); // check usually comes empty
 
-        let vd = {};
+        let totalVendasOnline = 0;
+        if (getVendasOnline.length <= 0) {
+          getVendasOnline = [];
+          totalVendasOnline = 0;
+        } else {
+          totalVendasOnline = getVendasOnline.reduce((a, b) => ({ totalvendas: a.totalvendas + b.totalvendas }));
+        }
+        Object.keys(totalVendasOnline).length > 0 ? (balanceProcessedData["vendasOnline"] = totalVendasOnline.totalvendas) : (balanceProcessedData["vendasOnline"] = 0);
 
-        //GET Devolucoes & Remove B2W
-        const resdevo = await Axios.get("http://localhost:5000/devolucoes", {
+        const { data: getTotalVendas } = await Axios.get("http://localhost:5000/totalVendas", {
           params: {
-            lastDate: lastDate,
-            secondLastDate: secondLastDate,
-            currentDate: currentDate
+            currentBalanceDate: currentBalanceDate,
+            prevBalanceDate: prevBalanceDate,
+            newBalanceDate: newBalanceDate
           }
         });
-        const jsonDevo = [...resdevo.data];
-        // setPagasTabela(jsonPagasT);
-        // console.log(jsonDevo, "Devolucoes"); // check
-        let devoTotal = []
-        let devoB2W = []
-        if (jsonDevo.length > 0) {
-          devoTotal = jsonDevo.filter(({ descricao }) => !descricao.includes("B2W")).reduce((a, b) => ({ total: a.total + b.total }));
-          devoB2W = jsonDevo.filter(({ descricao }) => descricao.includes("B2W"));
-        } else {
-          devoTotal["total"] = 0
-          devoB2W = 0
-        }
 
-          // console.log(devoTotal.total, "total")
-       
+        balanceProcessedData["vendastotal"] = getTotalVendas[0].totalvendas;
+        balanceProcessedData["vendasBruta"] = getTotalVendas[0].totalvendas - balanceProcessedData.devoTotal - balanceProcessedData.devoB2W;
+        balanceProcessedData["vendasLojaFisica"] = getTotalVendas[0].totalvendas - balanceProcessedData.vendasOnline;
+        balanceProcessedData["percentFisica"] = ((balanceProcessedData["vendasLojaFisica"] / balanceProcessedData["vendastotal"]) * 100).toFixed(2);
+        balanceProcessedData["percentOnline"] = ((balanceProcessedData.vendasOnline / balanceProcessedData["vendastotal"]) * 100).toFixed(2);
+        balanceProcessedData["imposto"] = balanceProcessedData.vendasBruta * 0.05;
 
-        devoB2W.length > 0 ? (vd["devoB2W"] = devoB2W[0].total) : (vd["devoB2W"] = 0);
-
-        vd["devoTotal"] = devoTotal.total;
-
-        Object.keys(totalOnline).length > 0 ? (vd["vendasOnline"] = totalOnline.totalvendas) : (vd["vendasOnline"] = 0);
-        vd["vendastotal"] = jsonVendas[0].totalvendas;
-        vd["vendasBruta"] = jsonVendas[0].totalvendas - vd.devoTotal - vd.devoB2W;
-        vd["vendasLojaFisica"] = jsonVendas[0].totalvendas - vd.vendasOnline;
-        vd["percentFisica"] = ((vd["vendasLojaFisica"] / vd["vendastotal"]) * 100).toFixed(2);
-        vd["percentOnline"] = ((vd.vendasOnline / vd["vendastotal"]) * 100).toFixed(2);
-        vd["imposto"] = vd.vendasBruta * 0.05;
-
-        // console.log(jsonDataEstoque, "TROUBLEE"); // check
-
-        // Definir estoque
-        if (jsonDataEstoque.length > 0) {
-          vd["estoque"] = jsonDataEstoque[0].custototal;
-        } else {
-          vd["estoque"] = 0;
-        }
-
-        // custom detalhes
-        // console.log(jsonOnline, "Online empty?")
-        if (jsonOnline.length > 0) {
-          jsonOnline.forEach(items => {
+        if (getVendasOnline.length > 0) {
+          getVendasOnline.forEach(items => {
             if (items.cliente === "B2W") {
-              vd["B2W"] = items.totalvendas - vd.devoB2W;
-              vd["taxasB2W"] = vd.B2W * 0.1225;
-              vd["freteB2W"] = items.totalvendas * 0.13;
+              balanceProcessedData["B2W"] = items.totalvendas - balanceProcessedData.devoB2W;
+              balanceProcessedData["taxasB2W"] = balanceProcessedData.B2W * 0.1225;
+              balanceProcessedData["freteB2W"] = items.totalvendas * 0.13;
             }
             if (items.cliente === "MAGAZINE LUIZA") {
-              vd["magazineLuiza"] = items.totalvendas;
-              vd["taxasMagazineLuiza"] = vd.magazineLuiza * 0.12;
+              balanceProcessedData["magazineLuiza"] = items.totalvendas;
+              balanceProcessedData["taxasMagazineLuiza"] = balanceProcessedData.magazineLuiza * 0.12;
             }
             if (items.cliente === "Mercado Livre") {
-              vd["mercadoPago"] = items.totalvendas;
-              vd["taxasMercadoPago"] = vd.mercadoPago * 0.05;
+              balanceProcessedData["mercadoPago"] = items.totalvendas;
+              balanceProcessedData["taxasMercadoPago"] = balanceProcessedData.mercadoPago * 0.05;
             }
           });
-
-          if (!vd.mercadoPago) {
-            vd["mercadoPago"] = 0;
-            vd["taxasMercadoPago"] = vd.mercadoPago * 0.05;
-          }
         } else {
-          vd["B2W"] = 0;
-          vd["taxasB2W"] = 0;
-          vd["freteB2W"] = 0;
-          vd["magazineLuiza"] = 0;
-          vd["taxasMagazineLuiza"] = 0;
-          vd["mercadoPago"] = 0;
-          vd["taxasMercadoPago"] = 0;
-          vd["mercadoPago"] = 0;
-          vd["taxasMercadoPago"] = 0;
+          balanceProcessedData["B2W"] = 0;
+          balanceProcessedData["taxasB2W"] = 0;
+          balanceProcessedData["freteB2W"] = 0;
+          balanceProcessedData["magazineLuiza"] = 0;
+          balanceProcessedData["taxasMagazineLuiza"] = 0;
+          balanceProcessedData["mercadoPago"] = 0;
+          balanceProcessedData["taxasMercadoPago"] = 0;
+          balanceProcessedData["mercadoPago"] = 0;
+          balanceProcessedData["taxasMercadoPago"] = 0;
         }
 
-        // console.log(jsonOnline)
-        // console.log(jsonVendas[0].totalvendas, jsonDRE[0].totalvendido, "VALORES VENDAS AQUI"); // check
-        if (jsonVendas[0].totalvendas === jsonDRE[0].totalvendido) {
-          vd["totalCMV"] = jsonDRE[0].totalcusto;
-          vd["totaLucroBruto"] = jsonDRE[0].totallucro;
-        } else if (jsonVendas[0].totalvendas / jsonDRE[0].totalvendido >= 0.98 && jsonVendas[0].totalvendas / jsonDRE[0].totalvendido < 1.02) {
-          vd["totalCMV"] = jsonDRE[0].totalcusto;
-          vd["totaLucroBruto"] = jsonDRE[0].totallucro;
-          console.log("Valores total de Vendas batem mais estao com uma discrepancia de ate 2% em vendasDados", "Query Vendas Periodo = ", jsonVendas[0].totalvendas, "Query Vendas Totais = ", jsonDRE[0].totalvendido);
-        } else {
-          vd["totalCMV"] = jsonDRE[0].totalcusto;
-          vd["totaLucroBruto"] = jsonDRE[0].totallucro;
-          console.log("Valores total de Vendas nao batem em vendasDados", "Query Vendas Periodo = ", jsonVendas[0].totalvendas, "Query Vendas Totais = ", jsonDRE[0].totalvendido);
-        }
-
-        // contas pagas
-
-        const responsepagasT = await Axios.get("http://localhost:5000/pagasTabela", {
+        const { data: getVendasDRE } = await Axios.get("http://localhost:5000/vendasdre", {
           params: {
-            lastDate: lastDate,
-            secondLastDate: secondLastDate,
-            currentDate: currentDate
+            currentBalanceDate: currentBalanceDate,
+            prevBalanceDate: prevBalanceDate,
+            newBalanceDate: newBalanceDate
           }
         });
-        const jsonPagasT = [...responsepagasT.data];
-        setPagasTabela(jsonPagasT);
-        // console.log("total pagas", jsonPagasT);
 
-        const totalPagas = jsonPagasT.reduce((a, b) => ({ total: a.total + b.total }));
-        vd["totalPagas"] = totalPagas.total;
-        vd["lucroBruto"] = vd.vendastotal - (vd.totalCMV + vd.imposto + vd.taxasB2W + vd.taxasMagazineLuiza + vd.taxasMercadoPago + vd.freteB2W);
-        vd["lucroLiquido"] = vd.lucroBruto - vd.totalPagas; // devolucoes e incluso nos pagas pois nao foi descontado acima e precisa em outra tabela
-        vd["lucroSobFaturamento"] = ((vd.lucroLiquido / vd.vendasBruta) * 100).toFixed(2);
-        // No calculo aqui usamos uma % sobre o faturamente pra calcular o lucro Bruto (faturamento - CMV) baseado no marketup de 40% revertido
-        vd["lucroB2W"] = Math.round(((vd.B2W - vd.freteB2W) * 0.311583 - vd.taxasB2W - vd.B2W * 0.05) * 100) / 100;
-        vd["lucroMagazineLuiza"] = Math.round((vd.magazineLuiza * 0.311583 - vd.taxasMagazineLuiza - vd.magazineLuiza * 0.05) * 100) / 100;
-        vd["lucroMercadoPago"] = Math.round((vd.mercadoPago * 0.311583 - vd.taxasMercadoPago - vd.mercadoPago * 0.05) * 100) / 100;
-        vd["lucroLojaFisica"] = Math.round((vd.lucroBruto - (vd.lucroB2W + vd.lucroMagazineLuiza + vd.lucroMercadoPago)) * 100) / 100;
-        vd["lucroSobFaturamentoB2W"] = ((vd.lucroB2W / (vd.B2W - vd.freteB2W)) * 100).toFixed(2);
-        vd["lucroSobFaturamentoMagazine"] = ((vd.lucroMagazineLuiza / vd.magazineLuiza) * 100).toFixed(2);
-        vd["lucroSobFaturamentoFisica"] = ((vd.lucroLojaFisica / vd.vendasLojaFisica) * 100).toFixed(2);
+        balanceProcessedData["totalCMV"] = getVendasDRE[0].totalcusto;
+        balanceProcessedData["totaLucroBruto"] = getVendasDRE[0].totallucro;
 
-        // console.log(vd.lucroBruto);
-        // console.log(vd);
-        // console.log(currentDate, "I am here again");
-
-        if (currentDate.length > 0) {
-          // console.log("Test to send only updated Estoque Data");
-
-          // appDispatch({ type: "balanco", value: { tipo: "Ativo Circulante", conta: "Estoques", total: "Test" } }); // ao inves de fazer o balanco adicionar dados pra db ?
-          // // Send data straight to database when update details
-          const estoqueData = await Axios.post("http://localhost:5000/insertBalance", { data: { tipo: "Ativo Circulante", conta: "Estoques", total: vd.estoque, date: currentDate } }, { timeout: 0 })
-            // const sendData = await Axios.post("http://localhost:5000/insertBalance", { data1, dataBal }, { timeout: 0 }) // correct
-            .then(resp => {
-              if (resp) {
-                console.log(resp.data, "response");
-              }
-              // if resp.data = something we update state - this will automatically-re render the component
-            })
-            .catch(err => {
-              console.log(err, "Adding new Estoque data");
-            });
-          await appDispatch({ type: "trackVendasDados", value: 1 });
-          // await console.log(appState.updateComponent, "Check through Estoque");
-        }
-
-        setDetalhes(vd);
+        if (getTotalVendas[0].totalvendas === getVendasDRE[0].totalvendido) console.log("Valores total de Vendas Batem corretamente!!!", "Query Vendas Periodo = ", getTotalVendas[0].totalvendas, "Query Vendas Totais = ", getVendasDRE[0].totalvendido);
+        else if (getTotalVendas[0].totalvendas / getVendasDRE[0].totalvendido >= 0.98 && getTotalVendas[0].totalvendas / getVendasDRE[0].totalvendido < 1.02) console.log("Valores total de Vendas batem mais estao com uma discrepancia de ate 2% em vendasDados", "Query Vendas Periodo = ", getTotalVendas[0].totalvendas, "Query Vendas Totais = ", getVendasDRE[0].totalvendido);
+        else console.log("Valores total de Vendas nao batem em vendasDados", "Query Vendas Periodo = ", getTotalVendas[0].totalvendas, "Query Vendas Totais = ", getVendasDRE[0].totalvendido);
       } catch (error) {
-        console.error(error.message);
+        console.error("Error processing VendasData in VendasDados Module");
       }
-    }
+    })();
 
-    props.state.length > 0 ? fetchData() : null;
-  }, [props.state, currentDate]);
+    (
+      await function createDadosSection() {
+        balanceProcessedData["lucroBruto"] = balanceProcessedData.vendastotal - (balanceProcessedData.totalCMV + balanceProcessedData.imposto + balanceProcessedData.taxasB2W + balanceProcessedData.taxasMagazineLuiza + balanceProcessedData.taxasMercadoPago + balanceProcessedData.freteB2W);
+        balanceProcessedData["lucroLiquido"] = balanceProcessedData.lucroBruto - balanceProcessedData.totalPagas; // devolucoes e incluso nos pagas pois nao foi descontado acima e precisa em outra tabela
+        balanceProcessedData["lucroSobFaturamento"] = ((balanceProcessedData.lucroLiquido / balanceProcessedData.vendasBruta) * 100).toFixed(2);
+        // OBS Nos calculos abaixo usamos uma % sobre o faturamente pra calcular o CMV e conssequentement o lucroBruto (faturamento - CMV) baseado no marketup de 31%
+        balanceProcessedData["lucroB2W"] = Math.round(((balanceProcessedData.B2W - balanceProcessedData.freteB2W) * 0.311583 - balanceProcessedData.taxasB2W - balanceProcessedData.B2W * 0.05) * 100) / 100;
+        balanceProcessedData["lucroMagazineLuiza"] = Math.round((balanceProcessedData.magazineLuiza * 0.311583 - balanceProcessedData.taxasMagazineLuiza - balanceProcessedData.magazineLuiza * 0.05) * 100) / 100;
+        balanceProcessedData["lucroMercadoPago"] = Math.round((balanceProcessedData.mercadoPago * 0.311583 - balanceProcessedData.taxasMercadoPago - balanceProcessedData.mercadoPago * 0.05) * 100) / 100;
+        balanceProcessedData["lucroLojaFisica"] = Math.round((balanceProcessedData.lucroBruto - (balanceProcessedData.lucroB2W + balanceProcessedData.lucroMagazineLuiza + balanceProcessedData.lucroMercadoPago)) * 100) / 100;
+        balanceProcessedData["lucroSobFaturamentoB2W"] = ((balanceProcessedData.lucroB2W / (balanceProcessedData.B2W - balanceProcessedData.freteB2W)) * 100).toFixed(2);
+        balanceProcessedData["lucroSobFaturamentoMagazine"] = ((balanceProcessedData.lucroMagazineLuiza / balanceProcessedData.magazineLuiza) * 100).toFixed(2);
+        balanceProcessedData["lucroSobFaturamentoFisica"] = ((balanceProcessedData.lucroLojaFisica / balanceProcessedData.vendasLojaFisica) * 100).toFixed(2);
+      }
+    )();
+
+    await (async function processEstoqueData() {
+      try {
+        const { data: getCurrentEstoque } = await Axios.get("http://localhost:5000/totalEstoque", {
+          params: {
+            currentBalanceDate: currentBalanceDate,
+            newBalanceDate: newBalanceDate
+          }
+        });
+
+        if (getCurrentEstoque.length > 0) balanceProcessedData["estoque"] = getCurrentEstoque[0].custototal;
+        else balanceProcessedData["estoque"] = 0;
+      } catch (error) {
+        console.log("Error processing EstoqueData in VendasDados Module");
+      }
+    })();
+
+    if (newBalanceDate.length > 0) updateDbEstoque(balanceProcessedData.estoque, newBalanceDate);
+
+    setBalanceData(balanceProcessedData);
+  }
+
+  async function updateDbEstoque(totalEstoque, currentDate) {
+    const estoqueData = await Axios.post("http://localhost:5000/insertBalance", { data: { tipo: "Ativo Circulante", conta: "Estoques", total: totalEstoque, date: currentDate } }, { timeout: 0 })
+      .then(resp => {
+        if (resp) console.log("System finished adding new data to DB based on previous balance");
+      })
+      .catch(err => {
+        console.log(err, "Error Adding new Estoque data into DB");
+      });
+    // await appDispatch({ type: "trackVendasDados", value: 1 });// still needs this in the last Refactor version? ?
+  }
 
   return (
     <>
-      {/* <div className="container mt-4"> */}
-      <div className="row">
-        <div className="col table-responsive">
-          <h3 className="mt-4">Dados</h3>
-          <h6 className="mt-4">Vendas Total: R${formNumb(detalhes.vendastotal)}</h6>
-          <h6 className="mt-4">Loja Fisica: R${formNumb(detalhes.vendasLojaFisica)}</h6>
-          <h6 className="mt-4">Loja Online: R${formNumb(detalhes.vendasOnline)}</h6>
-          <h6 className="mt-4">Estoque Atual: R${formNumb(detalhes.estoque)}</h6>
-          <h6 className="mt-4">Lucro Liquido Sob Faturamento: {detalhes.lucroSobFaturamento}%</h6>
-          <h6 className="mt-4">Lucro Bruto Sob Faturamento B2W: {detalhes.lucroSobFaturamentoB2W}%</h6>
-          <h6 className="mt-4">Lucro Bruto Sob Faturamento Magazine: {detalhes.lucroSobFaturamentoMagazine}%</h6>
-          <h6 className="mt-4">Lucro Bruto Sob Faturamento Fisica: {detalhes.lucroSobFaturamentoFisica}%</h6>
-        </div>
-        <div className="col">
-          <h6 className="mt-4 text-center">% Vendas</h6>
-
-          <Doughnut data={vendasChart} />
-        </div>
-        <div className="col">
-          <h6 className="mt-4 text-center"> Lucro</h6>
-
-          <Doughnut data={lucroChart} />
-        </div>
+      {/* <div className="d-inline-flex col"> */}
+      <div className="col-lg-2">
+        <h3 className="mt-4">Dados</h3>
+        <h6 className="mt-4">Vendas Total: R${formatNumber(balanceData.vendastotal)}</h6>
+        <h6 className="mt-4">Loja Fisica: R${formatNumber(balanceData.vendasLojaFisica)}</h6>
+        <h6 className="mt-4">Loja Online: R${formatNumber(balanceData.vendasOnline)}</h6>
+        <h6 className="mt-4">Estoque Atual: R${formatNumber(balanceData.estoque)}</h6>
+        <h6 className="mt-4">Lucro Liquido Sob Faturamento: {balanceData.lucroSobFaturamento}%</h6>
+        <h6 className="mt-4">Lucro Bruto Sob Faturamento B2W: {balanceData.lucroSobFaturamentoB2W}%</h6>
+        <h6 className="mt-4">Lucro Bruto Sob Faturamento Magazine: {balanceData.lucroSobFaturamentoMagazine}%</h6>
+        <h6 className="mt-4">Lucro Bruto Sob Faturamento Fisica: {balanceData.lucroSobFaturamentoFisica}%</h6>
       </div>
-      {/* </div> */}
-      {/* Have to do a bit manual to ensure its always the same */}
-      {/* <div className="container"> */}
-      <div className="row mt-1">
-        <div className="col table-responsive mt-2">
-          <h3 className="mt-2">DRE </h3>
+      <div className="col-lg-3">
+        <h6 className="mt-4 text-center">% Vendas</h6>
 
-          <table className="table table-striped table-sm table-hover mt-4">
-            <thead>
-              <tr>
-                <th>Lancamento</th>
-                <th>Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>(=) Receita Total de Vendas</td>
-                <td>R${formNumb(detalhes.vendastotal)}</td>
-              </tr>
-              <tr>
-                <td>(-) Devolucoes</td>
-                <td>R${formNumb(detalhes.devoTotal + detalhes.devoB2W)}</td>
-              </tr>
-              <tr>
-                <td>
-                  <h6>(=) Receita Bruta de Vendas </h6>
-                </td>
-                <td>R${formNumb(detalhes.vendasBruta)}</td>
-              </tr>
-              <tr>
-                <td>(-) Total CMV</td>
-                <td>R${formNumb(detalhes.totalCMV)}</td>
-              </tr>
-              <tr>
-                <td>(-) Impostos NF</td>
-                <td>R${formNumb(detalhes.imposto)}</td>
-              </tr>
-              <tr>
-                <td>(-) Taxas B2W</td>
-                <td>R${formNumb(detalhes.taxasB2W)}</td>
-              </tr>
-              <tr>
-                <td>(-) Taxas Magazine Luiza</td>
-                <td>R${formNumb(detalhes.taxasMagazineLuiza)}</td>
-              </tr>
-              <tr>
-                <td>(-) Taxas Mercado Pago</td>
-                <td>R${formNumb(detalhes.taxasMercadoPago)}</td>
-              </tr>
-              <tr>
-                <td>(-) Frete B2W</td>
-                <td>R${formNumb(detalhes.freteB2W)}</td>
-              </tr>
-              <tr>
-                <td>
-                  <h6>(=) Total Lucro Bruto</h6>
-                </td>
-                <td>R${formNumb(detalhes.lucroBruto)}</td>
-              </tr>
-              <tr>
-                <td>
-                  <h6>(=) Despesas Operacionais</h6>
-                </td>
-                <td>R${formNumb(detalhes.totalPagas)}</td>
-              </tr>
-              <tr>
-                <td>
-                  <h6>(=) Total Lucro Liquido</h6>
-                </td>
-                <td>R${formNumb(detalhes.lucroLiquido)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div className="col table-responsive mt-2">
-          <h6 className="mt-4 mb-2">Despesas Operacionais </h6>
+        <Doughnut data={pieChartVendas} />
+        <h6 className="mt-4 text-center"> Lucro</h6>
 
-          <table className="table table-striped table-sm table-hover mt-4">
-            <thead>
-              <tr>
-                <th>Conta</th>
-                <th>Total</th>
-                <th>% Total</th>
+        <Doughnut data={pieChartLucro} />
+      </div>
+
+      <div className="col-lg-3">
+        <h3 className="mt-2">DRE </h3>
+
+        <table className="table table-striped table-sm table-hover mt-4">
+          <thead>
+            <tr>
+              <th>Lancamento</th>
+              <th>Data</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>(=) Receita Total de Vendas</td>
+              <td>R${formatNumber(balanceData.vendastotal)}</td>
+            </tr>
+            <tr>
+              <td>(-) Devolucoes</td>
+              <td>R${formatNumber(balanceData.devoTotal + balanceData.devoB2W)}</td>
+            </tr>
+            <tr>
+              <td>
+                <h6>(=) Receita Bruta de Vendas </h6>
+              </td>
+              <td>R${formatNumber(balanceData.vendasBruta)}</td>
+            </tr>
+            <tr>
+              <td>(-) Total CMV</td>
+              <td>R${formatNumber(balanceData.totalCMV)}</td>
+            </tr>
+            <tr>
+              <td>(-) Impostos NF</td>
+              <td>R${formatNumber(balanceData.imposto)}</td>
+            </tr>
+            <tr>
+              <td>(-) Taxas B2W</td>
+              <td>R${formatNumber(balanceData.taxasB2W)}</td>
+            </tr>
+            <tr>
+              <td>(-) Taxas Magazine Luiza</td>
+              <td>R${formatNumber(balanceData.taxasMagazineLuiza)}</td>
+            </tr>
+            <tr>
+              <td>(-) Taxas Mercado Pago</td>
+              <td>R${formatNumber(balanceData.taxasMercadoPago)}</td>
+            </tr>
+            <tr>
+              <td>(-) Frete B2W</td>
+              <td>R${formatNumber(balanceData.freteB2W)}</td>
+            </tr>
+            <tr>
+              <td>
+                <h6>(=) Total Lucro Bruto</h6>
+              </td>
+              <td>R${formatNumber(balanceData.lucroBruto)}</td>
+            </tr>
+            <tr>
+              <td>
+                <h6>(=) Despesas Operacionais</h6>
+              </td>
+              <td>R${formatNumber(balanceData.totalPagas)}</td>
+            </tr>
+            <tr>
+              <td>
+                <h6>(=) Total Lucro Liquido</h6>
+              </td>
+              <td>R${formatNumber(balanceData.lucroLiquido)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div className="col-lg-4">
+        <h3 className="mt-2 mb-2">Despesas Operacionais </h3>
+
+        <table className="table table-striped table-sm table-hover mt-4">
+          <thead>
+            <tr>
+              <th>Conta</th>
+              <th>Total</th>
+              <th>% Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tabelaPagas.map(items => (
+              <tr key={genRandomId()}>
+                <td>{items.conta}</td>
+                <td>R${formatNumber(items.total)}</td>
+                <td>{formatNumber(items.percenttotal * 100)}%</td>
               </tr>
-            </thead>
-            <tbody>
-              {pagasTabela.map(items => (
-                <tr key={uid()}>
-                  <td>{items.conta}</td>
-                  <td>R${formNumb(items.total)}</td>
-                  <td>{formNumb(items.percenttotal * 100)}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
       {/* </div> */}
     </>

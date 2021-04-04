@@ -1,24 +1,14 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState } from "react";
 import { Pie } from "react-chartjs-2";
 import Axios from "axios";
-import StateContext from "../StateContext";
-// import DispatchContext from "../../DispatchContext";
 
-function ContasPagar() {
+function ContasPagar({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
   const [pagarTabela, setPagarTabela] = useState([]);
-  const [detalhes, setDetalhes] = useState([]);
-  const appState = useContext(StateContext);
-  // const appDispatch = useContext(DispatchContext);
+  const [detalhesPgtos, setDetalhesPgtos] = useState([]);
 
-  // let currentDate = appState.currentDate;
-  // let lastDate = appState.lastDate;
-  // console.log(currentDate, lastDate, "ContasPagar")
-  // generate IDs
-  const uid = function () {
+  const genRandomId = function () {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
   };
-
-  // Setup apagar Chart
 
   let apagarLabels = [];
   let apagarData = [];
@@ -29,7 +19,7 @@ function ContasPagar() {
     return 0;
   });
 
-  const pagarChart = {
+  const pieChartPagar = {
     labels: apagarLabels,
     datasets: [
       {
@@ -42,77 +32,72 @@ function ContasPagar() {
   };
 
   useEffect(() => {
-    const getData = async () => {
-      try {
-        //Get apagar details
-        // console.log("this is running", appState.currentDate, "current", appState.lastDate, "last Date");
+    if (prevBalanceDate || currentBalanceDate) getContasApagarData();
+  }, [currentBalanceDate, newBalanceDate]);
 
-        const resPagar = await Axios.get("http://localhost:5000/pagarTabela", {
-          params: {
-            currentDate: appState.currentDate,
-            lastDate: appState.lastDate
-          }
-        });
-        const jsonPagarTab = await [...resPagar.data];
-        // console.log(jsonPagarTab, "Your data");
-        setPagarTabela(jsonPagarTab);
-
-        let fornecedores = {};
-        jsonPagarTab.forEach(items => {
-          if (items.conta === "Mercadoria para Revenda") {
-            fornecedores["conta"] = items.conta;
-            fornecedores["total"] = items.total;
-            fornecedores["tipo"] = "Passivo Circulante";
-          }
-        });
-        // load into dispatch to save new balance info
-        if (appState.currentDate.length > 0) {
-          // console.log('I am here contas pagar', fornecedores)
-          // appDispatch({ type: "balanco", value: { tipo: fornecedores.tipo, conta: fornecedores.conta, total: fornecedores.total } }); // old way
-          const fornecedoresPagar = await Axios.post("http://localhost:5000/insertBalance", { data: { tipo: "Passivo Circulante", conta: "Fornecedores", total: fornecedores.total, date: appState.currentDate } }, { timeout: 0 })
-            // const sendData = await Axios.post("http://localhost:5000/insertBalance", { data1, dataBal }, { timeout: 0 }) // correct
-            .then(resp => {
-              if (resp.data) {
-                console.log(resp.data);
-              }
-              // if resp.data = something we update state - this will automatically-re render the component
-            })
-            .catch(err => {
-              console.log(err.data);
-            });
+  async function getContasApagarData() {
+    try {
+      const resPagar = await Axios.get("http://localhost:5000/pagarTabela", {
+        params: {
+          newDate: newBalanceDate,
+          currentDate: currentBalanceDate
         }
+      });
+      const jsonPagarTab = await [...resPagar.data];
+      setPagarTabela(jsonPagarTab);
 
-        // console.log(fornecedores);
+      let fornecedores = {};
+      jsonPagarTab.forEach(items => {
+        if (items.conta === "Mercadoria para Revenda") {
+          fornecedores["conta"] = items.conta;
+          fornecedores["total"] = items.total;
+          fornecedores["tipo"] = "Passivo Circulante";
+        }
+      });
 
-        const responsePagar = await Axios.get("http://localhost:5000/totalPagar", {
-          params: {
-            currentDate: appState.currentDate,
-            lastDate: appState.lastDate
-          }
-        });
-        const jsonDataPagar = await [...responsePagar.data];
+      const responsePagar = await Axios.get("http://localhost:5000/totalPagar", {
+        params: {
+          newDate: newBalanceDate,
+          currentDate: currentBalanceDate
+        }
+      });
+      const jsonDataPagar = await [...responsePagar.data];
 
-        let DetalhesApagar = {};
-        DetalhesApagar["contasPagar"] = jsonDataPagar[0].total;
+      let DetalhesApagar = {};
+      DetalhesApagar["contasPagar"] = jsonDataPagar[0].total;
 
-        setDetalhes(DetalhesApagar);
+      if (newBalanceDate.length > 0) await updateDbContasApagar(fornecedores.total);
 
-        // console.log(cashflow);
-      } catch (error) {
-        console.error(error.message);
-      }
-    };
-    getData();
-  }, [appState.currentDate, appState.lastDate]);
+      setDetalhesPgtos(DetalhesApagar);
+    } catch (error) {
+      console.error(error.message);
+    }
+  }
+
+  async function updateDbContasApagar(totalFornecedores) {
+    const fornecedoresPagar = await Axios.post("http://localhost:5000/insertBalance", { data: { tipo: "Passivo Circulante", conta: "Fornecedores", total: totalFornecedores, date: newBalanceDate } }, { timeout: 0 })
+      .then(resp => {
+        if (resp.data) {
+          console.log("Sucessfull updated Stock into DB when creating new balance");
+        }
+      })
+      .catch(err => {
+        console.log(err.data, "when inserting Fornecedores Total apagar into DB");
+      });
+  }
 
   return (
     <>
-      <h3 className="mt-4">Contas a Pagar Total = R${detalhes.contasPagar}</h3>
-
-      <div className="row mt-4">
-        <div className="col table-responsive ">
-          <div>
-            <table className="table table-striped table-sm mt-4 ">
+      <div>
+        <div>
+          <h3 className="text-center mt-2">
+            Total Contas a Pagar = R${detalhesPgtos.contasPagar} em {newBalanceDate ? `${new Date(newBalanceDate).getDate()}/${new Date(newBalanceDate).getMonth() + 1}/${new Date(newBalanceDate).getFullYear()}` : `${new Date(currentBalanceDate).getDate()}/${new Date(currentBalanceDate).getMonth() + 1}/${new Date(currentBalanceDate).getFullYear()}`}
+          </h3>
+        </div>
+        <div className="d-inline-flex col">
+          <div className="col table-responsive mt-2">
+          <h4 className="text-center mt-2">Maiores contas a pagar</h4>
+            <table className="table table-striped table-sm mt-5">
               <thead>
                 <tr>
                   <th> Conta</th>
@@ -121,7 +106,7 @@ function ContasPagar() {
               </thead>
               <tbody>
                 {pagarTabela.map(items => (
-                  <tr key={uid()}>
+                  <tr key={genRandomId()}>
                     <td>{items.conta}</td>
                     <td>R${items.total}</td>
                   </tr>
@@ -129,9 +114,11 @@ function ContasPagar() {
               </tbody>
             </table>
           </div>
-        </div>
-        <div className="col table-responsive mt-5">
-          <Pie data={pagarChart} />
+          <div className="col table-responsive mt-2">
+          <h4 className="text-center mt-2"></h4>
+          <h4 className="text-center mt-5"></h4>
+            <Pie data={pieChartPagar} />
+          </div>
         </div>
       </div>
     </>

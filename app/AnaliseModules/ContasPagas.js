@@ -1,60 +1,21 @@
-import React, { useEffect, useContext } from "react";
+import React, { useEffect } from "react";
 import { Line, Bar } from "react-chartjs-2";
 import palette from "google-palette";
 import { useImmer } from "use-immer";
 import Axios from "axios";
-import StateContext from "../StateContext";
 
-function ContasPagas() {
-  // Old Style
-  // const [pgsDescricao, setPgsDescricao] = useState([]);
-  // const [pgsContas, setPgsContas] = useState([]);
-  // const [datas, setDatas] = useState([]);
-
-  // // Using immerReducer
-  // const initialState = {
-  //   pgsDescricao: [],
-  //   pgsContas: [],
-  //   pgsDatas: []
-  // };
-
-  // function ourReducer(draft, action) {
-  //   switch (action.type) {
-  //     case "pgsDescricao":
-  //       draft.pgsDescricao = action.value;
-  //       return;
-  //     case "pgsContas":
-  //       draft.pgsContas = action.value;
-  //       return;
-  //       case "pgsDatas":
-  //         draft.pgsDatas = action.value
-  //         return;
-  //   }
-  // }
-
-  // Example using dispatch
-  // const [state, dispatch] = useImmerReducer(ourReducer, initialState);
-
-  // // setting state
-
+function ContasPagas({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
   const [state, setState] = useImmer({
-    pgsDescricao: [],
-    pgsContas: [],
-    pgsDatas: []
+    detailsPgs: [],
+    totalContasPgs: [],
+    datesPgs: []
   });
-  const appState = useContext(StateContext);
-  let lastDate = appState.lastDate;
-  let secondLastDate = appState.secondLastDate;
-  let currentDate = appState.currentDate;
-  // console.log(appState.secondLastDate);
 
-  // generate IDs
-  const uid = function () {
+  const genRandomId = function () {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
   };
 
-  // format numbers
-  const formNumb = function (params) {
+  const formatNumbers = function (params) {
     if (typeof params === "number") {
       return params.toLocaleString(navigator.language, { maximumFractionDigits: 2 });
     } else {
@@ -62,46 +23,36 @@ function ContasPagas() {
     }
   };
 
-  // charts
-
-  // prepare data label
-  let datasLab = state.pgsDatas.map(items => {
-    return `${new Date(items).getDate()}/${new Date(items).getMonth() + 1}/${new Date(items).getFullYear()}`;
+  let pgsChartLabel = state.datesPgs.map(items => {
+    return `${new Date(items).getMonth() + 1}/${new Date(items).getFullYear()}`;
   });
 
-  // prepare values
-  let contasTot = [];
+  let pgsChartValues = [];
 
-  state.pgsContas.forEach(items => {
+  state.totalContasPgs.forEach(items => {
     let outro = {};
     outro["conta"] = items.conta;
     outro["values"] = [];
-    state.pgsDatas.forEach(data => {
+    state.datesPgs.forEach(data => {
       if (items[data]) {
         outro.values.push(items[data]);
       } else {
         outro.values.push(0);
       }
     });
-    contasTot.push(outro);
+    pgsChartValues.push(outro);
   });
 
-  // console.log(contasTot, 'contasTot')
+  let chartColour = palette(["mpn65", "qualitative"], 22);
 
-  let seq = palette(["mpn65", "qualitative"], 22);
-  // console.log(seq);
-
-  // console.log(contasTot);
-  // console.log(datasLab)
-
-  const chartConta = {
-    labels: datasLab,
-    datasets: contasTot.map((items, index) => {
+  const lineChartPgs = {
+    labels: pgsChartLabel,
+    datasets: pgsChartValues.map((items, index) => {
       return {
         label: items.conta,
         data: items.values,
-        backgroundColor: `#${seq[index]}`,
-        borderColor: `#${seq[index]}`,
+        backgroundColor: `#${chartColour[index]}`,
+        borderColor: `#${chartColour[index]}`,
         fill: true
       };
     })
@@ -122,169 +73,132 @@ function ContasPagas() {
     }
   };
 
-  let barContas = {
-    labels: datasLab,
-    datasets: contasTot.map((items, index) => {
+  let barChartPgs = {
+    labels: pgsChartLabel,
+    datasets: pgsChartValues.map((items, index) => {
       return {
         label: items.conta,
         data: items.values,
-        backgroundColor: `#${seq[index]}`,
+        backgroundColor: `#${chartColour[index]}`,
         fill: true
       };
     })
   };
 
   useEffect(() => {
-    async function getData() {
-      try {
-        const jsonContas = await Axios.get("http://localhost:5000/pagasByContas", {
-          params: {
-            lastDate: lastDate,
-            secondLastDate: secondLastDate,
-            currentDate: currentDate
-          }
-        });
-        // console.log(jsonContas.data);
+    if (prevBalanceDate || currentBalanceDate) getContasPagasData();
+  }, [currentBalanceDate, newBalanceDate]);
 
-        const jsonDescri = await Axios.get("http://localhost:5000/pagasByDescricao", {
-          params: {
-            lastDate: lastDate,
-            secondLastDate: secondLastDate,
-            currentDate: currentDate
-          }
-        });
-        // const jsonDescri = await resDescri.json();
-        // console.log(jsonDescri.data);
+  async function getContasPagasData() {
+    try {
+      const pagasByContas = await Axios.get("http://localhost:5000/pagasByContas", {
+        params: {
+          currentBalanceDate: currentBalanceDate,
+          prevBalanceDate: prevBalanceDate,
+          newBalanceDate: newBalanceDate
+        }
+      });
 
-        // ##Rearrange jsonContas Object
-        let pgs = [];
+      const pagasDetails = await Axios.get("http://localhost:5000/pagasByDescricao", {
+        params: {
+          currentBalanceDate: currentBalanceDate,
+          prevBalanceDate: prevBalanceDate,
+          newBalanceDate: newBalanceDate
+        }
+      });
 
-        for (let i = 0; i < jsonContas.data.length; i++) {
+      let totalContasPgs = [];
+
+      (function formatPagasByContas() {
+        for (let i = 0; i < pagasByContas.data.length; i++) {
           let datas = [];
           let valor = [];
-          datas = Object.keys(jsonContas.data[i].json_object_agg);
-          valor = Object.values(jsonContas.data[i].json_object_agg);
+          datas = Object.keys(pagasByContas.data[i].json_object_agg);
+          valor = Object.values(pagasByContas.data[i].json_object_agg);
 
-          let outro = {};
-          outro["conta"] = jsonContas.data[i].conta;
+          let pagasTemp = {};
+          pagasTemp["conta"] = pagasByContas.data[i].conta;
 
           for (let j = 0; j < datas.length; j++) {
-            let nome = datas[j];
-            let dadinho = valor[j];
+            let dtLabels = datas[j];
+            let values = valor[j];
 
-            outro[nome] = dadinho;
+            pagasTemp[dtLabels] = values;
           }
-          // outside the loop execute this for when the dataset outro is ready
-          pgs.push(outro);
+          totalContasPgs.push(pagasTemp);
         }
-        // console.log(pgs);
-        // set State pgs
-        // setPgsContas(pgs);
+      })();
 
-        // ##Rearrange jsonContas Object
-        let pgsDetalhes = [];
+      let detailsPgs = [];
 
-        for (let i = 0; i < jsonDescri.data.length; i++) {
+      (function formatContasObject() {
+        for (let i = 0; i < pagasDetails.data.length; i++) {
           let datas = [];
           let valor = [];
-          datas = Object.keys(jsonDescri.data[i].json_object_agg);
-          valor = Object.values(jsonDescri.data[i].json_object_agg);
+          datas = Object.keys(pagasDetails.data[i].json_object_agg);
+          valor = Object.values(pagasDetails.data[i].json_object_agg);
 
-          let outro = {};
-          outro["conta"] = jsonDescri.data[i].conta;
-          outro["descricao"] = jsonDescri.data[i].descricao;
+          let pagasDetalhesTemp = {};
+          pagasDetalhesTemp["conta"] = pagasDetails.data[i].conta;
+          pagasDetalhesTemp["descricao"] = pagasDetails.data[i].descricao;
 
           for (let j = 0; j < datas.length; j++) {
-            let nome = datas[j];
-            let dadinho = valor[j];
+            let dateDetails = datas[j];
+            let valueDetails = valor[j];
 
-            outro[nome] = dadinho;
+            pagasDetalhesTemp[dateDetails] = valueDetails;
           }
-          // outside the loop execute this for when the dataset outro is ready
-          pgsDetalhes.push(outro);
+          detailsPgs.push(pagasDetalhesTemp);
         }
-        // console.log(pgsDetalhes);
+      })();
 
-        // set State Descricao
-        // setPgsDescricao(pgsDetalhes);
+      let datesPgs = [];
 
-        let datas = [];
-
-        pgsDetalhes.forEach(element => {
-          // console.log(Object.keys(element))
-          Object.keys(element).forEach(e => {
-            // console.log(e)
-            if (e !== "conta" && e !== "descricao" && datas.includes(e) === false) {
-              datas.push(e);
-            }
-          });
+      detailsPgs.forEach(element => {
+        Object.keys(element).forEach(e => {
+          if (e !== "conta" && e !== "descricao" && datesPgs.includes(e) === false) {
+            datesPgs.push(e);
+          }
         });
+      });
 
-        // set State datas in order
-        datas = datas.sort();
+      datesPgs = datesPgs.sort();
 
-        // console.log(datas);
-        // Old Style Set datas
-        // setDatas(datas);
-        // console.log(pgs)
-        // console.log(pgsDetalhes)
-
-        setState(draft => {
-          draft.pgsContas = pgs;
-          draft.pgsDescricao = pgsDetalhes;
-          draft.pgsDatas = datas;
-        });
-
-        // // Dispatch Example
-        // dispatch({type: "pgsContas", value: pgs})
-        // dispatch({type: "pgsDescricao", value: pgsDetalhes})
-        // dispatch({type: "pgsDatas", value: datas})
-      } catch (error) {
-        console.error(error.message);
-      }
+      setState(draft => {
+        draft.totalContasPgs = totalContasPgs;
+        draft.detailsPgs = detailsPgs;
+        draft.datesPgs = datesPgs;
+      });
+    } catch (error) {
+      console.error(error.message);
     }
-    getData();
-  }, [lastDate, currentDate]);
+  }
 
   return (
     <>
-      <h2 className="mt-4 text-center"> Analise Despesas ate {`${new Date(appState.lastDate).getDate()}/${new Date(appState.lastDate).getMonth() + 1}/${new Date(appState.lastDate).getFullYear()}`}</h2>
-      <div className="row mt-4">
-        <div className="col">
-          <h6 className="mt-4 text-center"> Despesas Mes </h6>
+      {/* <div className="col"> */}
+        <div className="col-lg-7">
+          <h3 className="text-center mt-2"> Analise Despesas em {newBalanceDate ? `${new Date(newBalanceDate).getDate()}/${new Date(newBalanceDate).getMonth() + 1}/${new Date(newBalanceDate).getFullYear()}` : `${new Date(currentBalanceDate).getDate()}/${new Date(currentBalanceDate).getMonth() + 1}/${new Date(currentBalanceDate).getFullYear()}`}</h3>
 
-          <Bar data={barContas} options={options} />
-        </div>
-        <div className="col table-responsive">
-          <h6 className="mt-4 text-center"> Despesas Mes</h6>
-
-          <Line data={chartConta} />
-        </div>
-      </div>
-
-      {/* Tabela  */}
-
-      <div className="row">
-        <div className="col">
-          <table className="table table-sm table-bordered table-hover mt-4">
+          <table className="table table-sm table-bordered table-hover mt-5">
             <thead>
               <tr>
                 <th>Contas</th>
-                {state.pgsDatas.map(items => (
-                  <th key={uid()}>{`${new Date(items).getDate()}/${new Date(items).getMonth() + 1}/${new Date(items).getFullYear()}`}</th>
+                {state.datesPgs.map(items => (
+                  <th key={genRandomId()}>{`${new Date(items).getDate()}/${new Date(items).getMonth() + 1}/${new Date(items).getFullYear()}`}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {state.pgsContas.map(e => (
-                <tr key={uid()} className="table-plain">
+              {state.totalContasPgs.map(e => (
+                <tr key={genRandomId()} className="table-plain">
                   <td className="text-nowrap font-weight-bold" data-toggle="collapse" data-target={`.${e.conta.slice(0, 4)}`} aria-expanded="true" aria-controls={e.conta}>
                     {e.conta}
 
-                    {state.pgsDescricao.map(det => {
+                    {state.detailsPgs.map(det => {
                       if (det.conta === e.conta) {
                         return (
-                          <div key={uid()} id={det.descricao} className={`${e.conta.slice(0, 4)} collapse font-weight-light text-dark text-lowercase`} aria-labelledby={e.conta}>
+                          <div key={genRandomId()} id={det.descricao} className={`${e.conta.slice(0, 4)} collapse font-weight-light text-dark text-lowercase`} aria-labelledby={e.conta}>
                             {det.descricao}
                           </div>
                         );
@@ -293,21 +207,21 @@ function ContasPagas() {
                       }
                     })}
                   </td>
-                  {state.pgsDatas.map(data =>
+                  {state.datesPgs.map(data =>
                     e[data] ? (
-                      <td key={uid()} data-toggle="collapse" data-target={`.${e.conta.slice(0, 4)}`} aria-expanded="false" aria-controls={e.conta}>
-                        R${formNumb(e[data])}
-                        {state.pgsDescricao.map(detalhe => {
+                      <td key={genRandomId()} data-toggle="collapse" data-target={`.${e.conta.slice(0, 4)}`} aria-expanded="false" aria-controls={e.conta}>
+                        R${formatNumbers(e[data])}
+                        {state.detailsPgs.map(detalhe => {
                           if (detalhe.conta === e.conta) {
                             if (detalhe[data] > 0) {
                               return (
-                                <div key={uid()} id={detalhe.descricao} className={`${e.conta.slice(0, 4)} collapse`} aria-labelledby={`${e.conta}`}>
-                                  R${formNumb(detalhe[data])}
+                                <div key={genRandomId()} id={detalhe.descricao} className={`${e.conta.slice(0, 4)} collapse`} aria-labelledby={`${e.conta}`}>
+                                  R${formatNumbers(detalhe[data])}
                                 </div>
                               );
                             } else {
                               return (
-                                <div key={uid()} id={detalhe.descricao} className={`${e.conta.slice(0, 4)} collapse`} aria-labelledby={`${e.conta}`}>
+                                <div key={genRandomId()} id={detalhe.descricao} className={`${e.conta.slice(0, 4)} collapse`} aria-labelledby={`${e.conta}`}>
                                   R$0
                                 </div>
                               );
@@ -318,7 +232,7 @@ function ContasPagas() {
                         })}
                       </td>
                     ) : (
-                      <td key={uid()}></td>
+                      <td key={genRandomId()}></td>
                     )
                   )}
                 </tr>
@@ -326,7 +240,16 @@ function ContasPagas() {
             </tbody>
           </table>
         </div>
-      </div>
+
+        <div className="col-lg-5">
+          <h3 className="mt-4 text-center"> Despesas Mes </h3>
+
+          <Bar data={barChartPgs} options={options} />
+          <h3 className="mt-4 text-center"> Despesas Mes</h3>
+
+          <Line data={lineChartPgs} />
+        </div>
+      {/* </div> */}
     </>
   );
 }

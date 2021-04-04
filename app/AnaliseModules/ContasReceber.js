@@ -1,18 +1,16 @@
 import React, { useEffect, useState, useContext } from "react";
 import { Polar } from "react-chartjs-2";
 import Axios from "axios";
-import StateContext from "../StateContext";
+// import StateContext from "../StateContext";
 
-function ContasReceber() {
+function ContasReceber({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
   const [receberTabela, setReceberTabela] = useState([]);
   const [receberAtrasadas, setReceberAtrasadas] = useState([]);
   const [detalhes, setDetalhes] = useState([]);
-  const appState = useContext(StateContext);
-  let currentDate = appState.currentDate;
-  let lastDate = appState.lastDate;
+  // const appState = useContext(StateContext);
 
   // generate IDs
-  const uid = function () {
+  const generateRandomId = function () {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
   };
 
@@ -30,126 +28,130 @@ function ContasReceber() {
   };
 
   useEffect(() => {
-    const getData = async () => {
-      try {
-        // Get Receber Details
-        const responseTabela = await Axios.get("http://localhost:5000/receberTabela", {
-          params: {
-            currentDate: currentDate,
-            lastDate: lastDate
-          }
-        });
-        const jsonDataReceber = await [...responseTabela.data];
-        setReceberTabela(jsonDataReceber);
-        // console.log(jsonDataReceber, "check the reduce");
-        const totalReceber = jsonDataReceber.reduce((a, b) => ({ total: a.total + b.total }));
+    if (prevBalanceDate || currentBalanceDate) getContasReceberData();
+  }, [currentBalanceDate]);
 
-        const resRecAt = await Axios.get("http://localhost:5000/receberAtrasadas", {
-          params: {
-            currentDate: currentDate,
-            lastDate: lastDate
-          }
-        });
-        const jsonRecAt = await [...resRecAt.data];
-        setReceberAtrasadas(jsonRecAt);
-
-        let totAtrasadas = {};
-
-        let detalhesReceber = {};
-
-        if (jsonRecAt.length > 0) {
-          totAtrasadas = jsonRecAt.reduce((a, b) => ({ total: a.total + b.total }));
-        } else {
-          totAtrasadas["total"] = 0;
+  async function getContasReceberData() {
+    try {
+      // Get Receber Details
+      const responseTabela = await Axios.get("http://localhost:5000/receberTabela", {
+        params: {
+          newDate: newBalanceDate,
+          currentDate: currentBalanceDate
         }
-        // console.log(totAtrasadas, "JSONREC aqui"); // check
+      });
+      const jsonDataReceber = await [...responseTabela.data];
+      const totalReceber = jsonDataReceber.reduce((a, b) => ({ total: a.total + b.total }));
 
-        detalhesReceber["contasReceber"] = Math.round(totalReceber.total * 100) / 100;
-        detalhesReceber["receberAtrasadas"] = totAtrasadas.total.toFixed(2);
-        detalhesReceber["PercentEmDia"] = (((totalReceber.total - totAtrasadas.total) / totalReceber.total) * 100).toFixed(2);
-        detalhesReceber["percentAtrasadas"] = ((totAtrasadas.total / totalReceber.total) * 100).toFixed(2);
-        setDetalhes(detalhesReceber);
-
-        if (currentDate.length > 0) {
-          // console.log('I am here receber')
-          const receberInsert = await Axios.post("http://localhost:5000/insertBalance", { data: { tipo: "Ativo Circulante", conta: "Contas a Receber Clientes (Boletos+ cheques ((Excluir cartoes a Receber)))", total: detalhesReceber.contasReceber, date: currentDate } }, { timeout: 0 })
-            // const sendData = await Axios.post("http://localhost:5000/insertBalance", { data1, dataBal }, { timeout: 0 }) // correct
-            .then(resp => {
-              if (resp.data) {
-                console.log(resp.data);
-              }
-              // if resp.data = something we update state - this will automatically-re render the component
-            })
-            .catch(err => {
-              console.log(err.data);
-            });
+      const resRecAt = await Axios.get("http://localhost:5000/receberAtrasadas", {
+        params: {
+          newDate: newBalanceDate,
+          currentDate: currentBalanceDate
         }
+      });
+      const jsonRecAt = await [...resRecAt.data];
 
-        // console.log(cashflow);
-      } catch (error) {
-        console.error(error.message);
+      let totAtrasadas = {};
+      let detalhesReceber = {};
+
+      if (jsonRecAt.length > 0) {
+        totAtrasadas = jsonRecAt.reduce((a, b) => ({ total: a.total + b.total }));
+      } else {
+        totAtrasadas["total"] = 0;
       }
-    };
-    getData();
-  }, [currentDate, lastDate, appState.updateAll]);
+
+      detalhesReceber["contasReceber"] = Math.round(totalReceber.total * 100) / 100;
+      detalhesReceber["receberAtrasadas"] = totAtrasadas.total.toFixed(2);
+      detalhesReceber["PercentEmDia"] = (((totalReceber.total - totAtrasadas.total) / totalReceber.total) * 100).toFixed(2);
+      detalhesReceber["percentAtrasadas"] = ((totAtrasadas.total / totalReceber.total) * 100).toFixed(2);
+
+      if (newBalanceDate.length > 0) await updateDbContasReceber(detalhesReceber.contasReceber);
+
+      setReceberTabela(jsonDataReceber);
+      setReceberAtrasadas(jsonRecAt);
+      setDetalhes(detalhesReceber);
+    } catch (error) {
+      console.error(error.message);
+    }
+  }
+
+  async function updateDbContasReceber(currentTotalReceber) {
+    const receberInsert = await Axios.post("http://localhost:5000/insertBalance", { data: { tipo: "Ativo Circulante", conta: "Contas a Receber Clientes (Boletos+ cheques ((Excluir cartoes a Receber)))", total: currentTotalReceber, date: newBalanceDate } }, { timeout: 0 })
+      .then(resp => {
+        if (resp.data) {
+          console.log(resp.data);
+        }
+        // if resp.data = something we update state - this will automatically-re render the component
+      })
+      .catch(err => {
+        console.log(err.data);
+      });
+  }
 
   return (
     <>
-      <h3 className="mt-4">Contas a Receber = R${detalhes.contasReceber}</h3>
-      <div className="row mt-4">
-        <div className="col table-responsive mt-2">
-          <h6 className="text-center mt-2">Maiores contas a receber</h6>
-
-          <table className="table table-striped table-sm mt-1">
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th>Total</th>
-                <th>%</th>
-              </tr>
-            </thead>
-            <tbody>
-              {receberTabela.map((items, index) => {
-                if (items.percentage >= 0.04) {
-                  return (
-                    <tr key={uid()}>
-                      <td>{items.cliente}</td>
-                      <td>R${items.total}</td>
-                      <td>{(items.percentage * 100).toFixed(2)}%</td>
-                    </tr>
-                  );
-                } else {
-                  return null;
-                }
-              })}
-            </tbody>
-          </table>
-          <h6 className="text-center mt-2">% Em dia vs Atrasadas</h6>
-          <div className="mt-4"></div>
-          <Polar data={atrasadasChart} />
+      <div>
+        <div>
+          <h3 className="text-center mt-2">
+            Total Contas a Receber em {newBalanceDate ? `${new Date(newBalanceDate).getDate()}/${new Date(newBalanceDate).getMonth() + 1}/${new Date(newBalanceDate).getFullYear()}` : `${new Date(currentBalanceDate).getDate()}/${new Date(currentBalanceDate).getMonth() + 1}/${new Date(currentBalanceDate).getFullYear()}`} R${detalhes.contasReceber}
+          </h3>
         </div>
-        <div className="col table-responsive mt-2">
-          <div>
-            <h6 className="text-center mt-2">Atrasadas</h6>
+        <div className="d-inline-flex col">
+          <div className="col table-responsive mt-2">
+            <h4 className="text-center mt-2">Maiores contas a receber</h4>
 
-            <table className="table table-striped table-sm mt-1 ">
+            <table className="table table-striped table-sm mt-5">
               <thead>
                 <tr>
                   <th>Cliente</th>
                   <th>Total</th>
+                  <th>%</th>
                 </tr>
               </thead>
               <tbody>
-                {receberAtrasadas.map((items, index) => {
-                  return (
-                    <tr key={uid()}>
-                      <td>{items.cliente}</td>
-                      <td>R${items.total}</td>
-                    </tr>
-                  );
+                {receberTabela.map((items, index) => {
+                  if (items.percentage >= 0.04) {
+                    return (
+                      <tr key={generateRandomId()}>
+                        <td>{items.cliente}</td>
+                        <td>R${items.total}</td>
+                        <td>{(items.percentage * 100).toFixed(2)}%</td>
+                      </tr>
+                    );
+                  } else {
+                    return null;
+                  }
                 })}
               </tbody>
             </table>
+
+            <h4 className="text-center mt-5">% Em dia vs Atrasadas</h4>
+            <div className="mt-5"></div>
+            <Polar data={atrasadasChart} />
+          </div>
+          <div className="col table-responsive mt-2">
+            <div>
+              <h3 className="text-center mt-2">Atrasadas</h3>
+
+              <table className="table table-striped table-sm mt-5 ">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {receberAtrasadas.map((items, index) => {
+                    return (
+                      <tr key={generateRandomId()}>
+                        <td>{items.cliente}</td>
+                        <td>R${items.total}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
