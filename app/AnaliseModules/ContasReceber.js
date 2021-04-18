@@ -3,7 +3,7 @@ import { Polar } from "react-chartjs-2";
 import Axios from "axios";
 // import StateContext from "../StateContext";
 
-function ContasReceber({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
+function ContasReceber({ prevBalanceDate, currentBalanceDate, newBalanceDate, setNewBalDataUpdate }) {
   const [receberTabela, setReceberTabela] = useState([]);
   const [receberAtrasadas, setReceberAtrasadas] = useState([]);
   const [detalhes, setDetalhes] = useState([]);
@@ -29,7 +29,7 @@ function ContasReceber({ prevBalanceDate, currentBalanceDate, newBalanceDate }) 
 
   useEffect(() => {
     if (prevBalanceDate || currentBalanceDate) getContasReceberData();
-  }, [currentBalanceDate]);
+  }, [currentBalanceDate, newBalanceDate]);
 
   async function getContasReceberData() {
     try {
@@ -65,7 +65,8 @@ function ContasReceber({ prevBalanceDate, currentBalanceDate, newBalanceDate }) 
       detalhesReceber["PercentEmDia"] = (((totalReceber.total - totAtrasadas.total) / totalReceber.total) * 100).toFixed(2);
       detalhesReceber["percentAtrasadas"] = ((totAtrasadas.total / totalReceber.total) * 100).toFixed(2);
 
-      if (newBalanceDate.length > 0) await updateDbContasReceber(detalhesReceber.contasReceber);
+      if (newBalanceDate.length > 0) {
+        await updateDbContasReceber(detalhesReceber.contasReceber);}
 
       setReceberTabela(jsonDataReceber);
       setReceberAtrasadas(jsonRecAt);
@@ -78,14 +79,17 @@ function ContasReceber({ prevBalanceDate, currentBalanceDate, newBalanceDate }) 
   async function updateDbContasReceber(currentTotalReceber) {
     const receberInsert = await Axios.post("http://localhost:5000/insertBalance", { data: { tipo: "Ativo Circulante", conta: "Contas a Receber Clientes (Boletos+ cheques ((Excluir cartoes a Receber)))", total: currentTotalReceber, date: newBalanceDate } }, { timeout: 0 })
       .then(resp => {
-        if (resp.data) {
-          console.log(resp.data);
+        if (resp) {
+
         }
         // if resp.data = something we update state - this will automatically-re render the component
       })
       .catch(err => {
         console.log(err.data);
       });
+
+      await console.log("Succesfully Added new scraped values into ContasReceber");
+      await setNewBalDataUpdate()
   }
 
   return (

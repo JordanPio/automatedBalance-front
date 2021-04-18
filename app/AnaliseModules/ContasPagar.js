@@ -2,7 +2,12 @@ import React, { useEffect, useState } from "react";
 import { Pie } from "react-chartjs-2";
 import Axios from "axios";
 
-function ContasPagar({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
+function ContasPagar({
+  prevBalanceDate,
+  currentBalanceDate,
+  newBalanceDate,
+  setNewBalDataUpdate,
+}) {
   const [pagarTabela, setPagarTabela] = useState([]);
   const [detalhesPgtos, setDetalhesPgtos] = useState([]);
 
@@ -13,7 +18,7 @@ function ContasPagar({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
   let apagarLabels = [];
   let apagarData = [];
 
-  pagarTabela.map(arrays => {
+  pagarTabela.map((arrays) => {
     apagarLabels.push(arrays.conta);
     apagarData.push(arrays.total);
     return 0;
@@ -24,11 +29,26 @@ function ContasPagar({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
     datasets: [
       {
         label: "Contas",
-        backgroundColor: ["#36A2EB", "#FF6384", "#FFCE56", "#00A6B4", "#6800B4", "#2FDE00", "#E7E9ED", "#4BC0C0"],
-        hoverBackgroundColor: ["#501800", "#4B5000", "#175000", "#003350", "#35014F"],
-        data: apagarData
-      }
-    ]
+        backgroundColor: [
+          "#36A2EB",
+          "#FF6384",
+          "#FFCE56",
+          "#00A6B4",
+          "#6800B4",
+          "#2FDE00",
+          "#E7E9ED",
+          "#4BC0C0",
+        ],
+        hoverBackgroundColor: [
+          "#501800",
+          "#4B5000",
+          "#175000",
+          "#003350",
+          "#35014F",
+        ],
+        data: apagarData,
+      },
+    ],
   };
 
   useEffect(() => {
@@ -40,14 +60,14 @@ function ContasPagar({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
       const resPagar = await Axios.get("http://localhost:5000/pagarTabela", {
         params: {
           newDate: newBalanceDate,
-          currentDate: currentBalanceDate
-        }
+          currentDate: currentBalanceDate,
+        },
       });
       const jsonPagarTab = await [...resPagar.data];
       setPagarTabela(jsonPagarTab);
 
       let fornecedores = {};
-      jsonPagarTab.forEach(items => {
+      jsonPagarTab.forEach((items) => {
         if (items.conta === "Mercadoria para Revenda") {
           fornecedores["conta"] = items.conta;
           fornecedores["total"] = items.total;
@@ -55,18 +75,22 @@ function ContasPagar({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
         }
       });
 
-      const responsePagar = await Axios.get("http://localhost:5000/totalPagar", {
-        params: {
-          newDate: newBalanceDate,
-          currentDate: currentBalanceDate
+      const responsePagar = await Axios.get(
+        "http://localhost:5000/totalPagar",
+        {
+          params: {
+            newDate: newBalanceDate,
+            currentDate: currentBalanceDate,
+          },
         }
-      });
+      );
       const jsonDataPagar = await [...responsePagar.data];
 
       let DetalhesApagar = {};
       DetalhesApagar["contasPagar"] = jsonDataPagar[0].total;
 
-      if (newBalanceDate.length > 0) await updateDbContasApagar(fornecedores.total);
+      if (newBalanceDate.length > 0)
+        await updateDbContasApagar(fornecedores.total);
 
       setDetalhesPgtos(DetalhesApagar);
     } catch (error) {
@@ -75,14 +99,31 @@ function ContasPagar({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
   }
 
   async function updateDbContasApagar(totalFornecedores) {
-    const fornecedoresPagar = await Axios.post("http://localhost:5000/insertBalance", { data: { tipo: "Passivo Circulante", conta: "Fornecedores", total: totalFornecedores, date: newBalanceDate } }, { timeout: 0 })
-      .then(resp => {
-        if (resp.data) {
-          console.log("Sucessfull updated Stock into DB when creating new balance");
+    const fornecedoresPagar = await Axios.post(
+      "http://localhost:5000/insertBalance",
+      {
+        data: {
+          tipo: "Passivo Circulante",
+          conta: "Fornecedores",
+          total: totalFornecedores,
+          date: newBalanceDate,
+        },
+      },
+      { timeout: 0 }
+    )
+      .then((resp) => {
+        if (resp) {
+          setNewBalDataUpdate();
+          console.log(
+            "Sucessfull updated ContasPagar into DB when creating new balance"
+          );
         }
       })
-      .catch(err => {
-        console.log(err.data, "when inserting Fornecedores Total apagar into DB");
+      .catch((err) => {
+        console.log(
+          err.data,
+          "when inserting ContasPagar scraped values into DB"
+        );
       });
   }
 
@@ -91,12 +132,19 @@ function ContasPagar({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
       <div>
         <div>
           <h3 className="text-center mt-2">
-            Total Contas a Pagar = R${detalhesPgtos.contasPagar} em {newBalanceDate ? `${new Date(newBalanceDate).getDate()}/${new Date(newBalanceDate).getMonth() + 1}/${new Date(newBalanceDate).getFullYear()}` : `${new Date(currentBalanceDate).getDate()}/${new Date(currentBalanceDate).getMonth() + 1}/${new Date(currentBalanceDate).getFullYear()}`}
+            Total Contas a Pagar = R${detalhesPgtos.contasPagar} em{" "}
+            {newBalanceDate
+              ? `${new Date(newBalanceDate).getDate()}/${
+                  new Date(newBalanceDate).getMonth() + 1
+                }/${new Date(newBalanceDate).getFullYear()}`
+              : `${new Date(currentBalanceDate).getDate()}/${
+                  new Date(currentBalanceDate).getMonth() + 1
+                }/${new Date(currentBalanceDate).getFullYear()}`}
           </h3>
         </div>
         <div className="d-inline-flex col">
           <div className="col table-responsive mt-2">
-          <h4 className="text-center mt-2">Maiores contas a pagar</h4>
+            <h4 className="text-center mt-2">Maiores contas a pagar</h4>
             <table className="table table-striped table-sm mt-5">
               <thead>
                 <tr>
@@ -105,7 +153,7 @@ function ContasPagar({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
                 </tr>
               </thead>
               <tbody>
-                {pagarTabela.map(items => (
+                {pagarTabela.map((items) => (
                   <tr key={genRandomId()}>
                     <td>{items.conta}</td>
                     <td>R${items.total}</td>
@@ -115,8 +163,8 @@ function ContasPagar({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
             </table>
           </div>
           <div className="col table-responsive mt-2">
-          <h4 className="text-center mt-2"></h4>
-          <h4 className="text-center mt-5"></h4>
+            <h4 className="text-center mt-2"></h4>
+            <h4 className="text-center mt-5"></h4>
             <Pie data={pieChartPagar} />
           </div>
         </div>

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useContext } from "react";
 import { Doughnut } from "react-chartjs-2";
 import Axios from "axios";
 
-function VendasDados({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
+function VendasDados({ prevBalanceDate, currentBalanceDate, newBalanceDate, setNewBalDataUpdate }) {
   const [balanceData, setBalanceData] = useState([]);
   const [tabelaPagas, setTabelaPagas] = useState([]);
 
@@ -208,6 +208,7 @@ function VendasDados({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
       }
     })();
 
+  
     if (newBalanceDate.length > 0) updateDbEstoque(balanceProcessedData.estoque, newBalanceDate);
 
     setBalanceData(balanceProcessedData);
@@ -216,12 +217,14 @@ function VendasDados({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
   async function updateDbEstoque(totalEstoque, currentDate) {
     const estoqueData = await Axios.post("http://localhost:5000/insertBalance", { data: { tipo: "Ativo Circulante", conta: "Estoques", total: totalEstoque, date: currentDate } }, { timeout: 0 })
       .then(resp => {
-        if (resp) console.log("System finished adding new data to DB based on previous balance");
+        if (resp) {
+          console.log("Sucessfull updated Estoque into DB when creating new balance");}
+          setNewBalDataUpdate()  
       })
       .catch(err => {
         console.log(err, "Error Adding new Estoque data into DB");
       });
-    // await appDispatch({ type: "trackVendasDados", value: 1 });// still needs this in the last Refactor version? ?
+    // await appDispatch({ type: "trackVendasDados", value: 1 });// still needs this in the last Refactor version? ? - maybe the solution is here
   }
 
   return (
