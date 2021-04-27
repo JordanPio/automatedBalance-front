@@ -4,7 +4,8 @@ import Axios from "axios";
 import { parse } from "date-fns";
 import { useImmer } from "use-immer";
 import { Link } from "react-router-dom";
-import VendasDados from "./VendasDados";
+import VendasDados from "./VendasDadosV2";
+import VendasDados1 from "./VendasDados";
 import CashFlow from "./CashFlow";
 import ContasPagar from "./ContasPagar";
 import ContasReceber from "./ContasReceber";
@@ -691,17 +692,21 @@ function analysisTableData() {
           <VendasDados prevBalanceDate={state.prevBalanceDate.data} currentBalanceDate={state.currentBalanceDate.data} newBalanceDate={state.newBalanceDate} setNewBalDataUpdate={() => setNewBalDataUpdate() } />
         </div>
       </div>
-
       <div className="d-flex row mt-5">
-        <div className="col">
-          <ContasReceber prevBalanceDate={state.prevBalanceDate.data} currentBalanceDate={state.currentBalanceDate.data} newBalanceDate={state.newBalanceDate} setNewBalDataUpdate={() => setNewBalDataUpdate() }/>
-        </div>
-        <div className="col">
-          <ContasPagar prevBalanceDate={state.prevBalanceDate.data} currentBalanceDate={state.currentBalanceDate.data} newBalanceDate={state.newBalanceDate} setNewBalDataUpdate={() => setNewBalDataUpdate() }/>
+        <div className="d-inline-flex col">
+          <VendasDados1 prevBalanceDate={state.prevBalanceDate.data} currentBalanceDate={state.currentBalanceDate.data} newBalanceDate={state.newBalanceDate} setNewBalDataUpdate={() => setNewBalDataUpdate() } />
         </div>
       </div>
       <div className="d-flex row mt-5">
-        <ContasPagas prevBalanceDate={state.prevBalanceDate.data} currentBalanceDate={state.currentBalanceDate.data} newBalanceDate={state.newBalanceDate} />
+        <div className="col">
+          {/* <ContasReceber prevBalanceDate={state.prevBalanceDate.data} currentBalanceDate={state.currentBalanceDate.data} newBalanceDate={state.newBalanceDate} setNewBalDataUpdate={() => setNewBalDataUpdate() }/> */}
+        </div>
+        <div className="col">
+          {/* <ContasPagar prevBalanceDate={state.prevBalanceDate.data} currentBalanceDate={state.currentBalanceDate.data} newBalanceDate={state.newBalanceDate} setNewBalDataUpdate={() => setNewBalDataUpdate() }/> */}
+        </div>
+      </div>
+      <div className="d-flex row mt-5">
+        {/* <ContasPagas prevBalanceDate={state.prevBalanceDate.data} currentBalanceDate={state.currentBalanceDate.data} newBalanceDate={state.newBalanceDate} /> */}
       </div>
     </div>
   );

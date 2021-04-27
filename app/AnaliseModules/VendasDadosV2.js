@@ -51,8 +51,7 @@ function VendasDados({ prevBalanceDate, currentBalanceDate, newBalanceDate, setN
 
     await (async function processDespesasData() {
       try {
-        // the query below leave only despesas - checked in 3 previous balance
-        const { data: getContasPagas } = await Axios.get("http://localhost:5000/pagasTabela", {
+        const { data: getContasPagas } = await Axios.get("http://localhost:5000/pagasTest", {
           params: {
             currentBalanceDate: currentBalanceDate,
             prevBalanceDate: prevBalanceDate,
@@ -60,6 +59,7 @@ function VendasDados({ prevBalanceDate, currentBalanceDate, newBalanceDate, setN
           }
         });
         setTabelaPagas(getContasPagas);
+
 
         function getTotalFiltered(dataset, accountType, accountDescription) {
 
@@ -76,46 +76,69 @@ function VendasDados({ prevBalanceDate, currentBalanceDate, newBalanceDate, setN
         }
 
 
+        // console.log(getTotalFiltered(getContasPagas, 'custom', 'Devolucao B2W'))
         dreData["taxasB2W"] = getTotalFiltered(getContasPagas, 'custom', 'Taxas B2W')
         dreData["freteB2W"] = getTotalFiltered(getContasPagas, 'custom', 'Frete B2W')
+        dreData["devoB2W"] = getTotalFiltered(getContasPagas, 'custom', 'Devolucao B2W')
         dreData["taxasMagazineLuiza"] = getTotalFiltered(getContasPagas, 'custom', 'Taxas Magazine')
         dreData["taxasMercadoPago"] = getTotalFiltered(getContasPagas, 'custom', 'Taxas Mercado')
-        // console.log(dreData.taxasB2W, dreData.freteB2W, dreData.taxasMagazineLuiza, dreData.taxasMercadoPago)
+        dreData["imposto"] = getTotalFiltered(getContasPagas, 'conta', 'Impostos')
 
-        const totalPagas = getContasPagas.reduce((a, b) => ({ total: a.total + b.total }));
-        dreData["totalPagas"] = totalPagas.total - dreData.taxasB2W - dreData.freteB2W - dreData.taxasMagazineLuiza - dreData.taxasMercadoPago
+        function getDevolucoes() {
+          return getContasPagas.filter(({ conta }) => (conta.includes("Devo")) || conta.includes("Dif")).reduce((a, b) => ({ total: a.total + b.total })).total > 0
+          ?
+          getContasPagas.filter(({ conta }) => (conta.includes("Devo")) || conta.includes("Dif")).reduce((a, b) => ({ total: a.total + b.total })).total
+          :
+          0
+
+        }
+
+        dreData["devoTotal"] = getDevolucoes() - dreData.devoB2W
+        // console.log(dreData.devoTotal)
+
+        
+        dreData["totalPagas"] = getContasPagas.reduce((a, b) => ({ total: a.total + b.total })).total - dreData.devoTotal - dreData.devoB2W - dreData.taxasB2W - dreData.freteB2W - dreData.taxasMagazineLuiza - dreData.taxasMercadoPago - dreData.imposto
+        // dreData["totalPagas"] =  dreData["totalPagas"] - dreData.devoTotal - dreData.devoB2W - dreData.taxasB2W - dreData.freteB2W - dreData.taxasMagazineLuiza - dreData.taxasMercadoPago - dreData.imposto
+ 
+        // console.log(typeof(dreData.totalPagas))
+        // console.log(typeof(dreData.devoB2W))
+        // console.log(dreData.devoTotal - dreData.devoB2W)
+        // console.log(dreData["totalPagas"] - dreData.devoTotal - dreData.devoB2W - dreData.taxasB2W - dreData.freteB2W - dreData.taxasMagazineLuiza - dreData.taxasMercadoPago - dreData.imposto)
+        // console.log(dreData.totalPagas, dreData.devoTotal, dreData.devoB2W, dreData.taxasB2W, dreData.freteB2W, dreData.taxasMagazineLuiza, dreData.taxasMercadoPago, dreData.imposto)
+
       } catch (error) {
         console.error("Error processing Despesas Data in VendasDados Component");
       }
     })();
 
-    await (async function processDevoData() {
-      try {
-        const { data: getDevolucoes } = await Axios.get("http://localhost:5000/devolucoes", {
-          params: {
-            currentBalanceDate: currentBalanceDate,
-            prevBalanceDate: prevBalanceDate,
-            newBalanceDate: newBalanceDate
-          }
-        });
+    // await (async function processDevoData() {
+    //   try {
+    //     const { data: getDevolucoes } = await Axios.get("http://localhost:5000/devolucoes", {
+    //       params: {
+    //         currentBalanceDate: currentBalanceDate,
+    //         prevBalanceDate: prevBalanceDate,
+    //         newBalanceDate: newBalanceDate
+    //       }
+    //     });
 
-        let devoTotal = [];
-        let devoB2W = [];
-        if (getDevolucoes.length > 0) {
-          devoTotal = getDevolucoes.reduce((a, b) => ({ total: a.total + b.total }));
-          devoB2W = getDevolucoes.filter(({ descricao }) => descricao.includes("B2W"));
-        } else {
-          devoTotal["total"] = 0;
-          devoB2W = 0;
-        }
+    //     let devoTotal = [];
+    //     let devoB2W = [];
+    //     if (getDevolucoes.length > 0) {
+    //       devoTotal = getDevolucoes.filter(({ descricao }) => !descricao.includes("B2W")).reduce((a, b) => ({ total: a.total + b.total }));
+    //       devoB2W = getDevolucoes.filter(({ descricao }) => descricao.includes("B2W"));
+    //     } else {
+    //       devoTotal["total"] = 0;
+    //       devoB2W = 0;
+    //     }
 
-        devoB2W.length > 0 ? (dreData["devoB2W"] = devoB2W[0].total) : (dreData["devoB2W"] = 0);
+    //     devoB2W.length > 0 ? (balanceProcessedData["devoB2W"] = devoB2W[0].total) : (balanceProcessedData["devoB2W"] = 0);
 
-        dreData["devoTotal"] = devoTotal.total;
-      } catch (error) {
-        console.error("Error processing Devolucao Data in VendasDados Module");
-      }
-    })();
+    //     balanceProcessedData["devoTotal"] = devoTotal.total;
+    //     console.log('devo total outra linha ', devoTotal.total, 'Devo B2B', devoB2W[0].total)
+    //   } catch (error) {
+    //     console.error("Error processing Devolucao Data in VendasDados Module");
+    //   }
+    // })();
 
     await (async function processVendasData() {
       try {
@@ -145,37 +168,37 @@ function VendasDados({ prevBalanceDate, currentBalanceDate, newBalanceDate, setN
         });
 
         dreData["vendastotal"] = getTotalVendas[0].totalvendas;
-        dreData["vendasBruta"] = getTotalVendas[0].totalvendas - dreData.devoTotal
+        dreData["vendasBruta"] = getTotalVendas[0].totalvendas - dreData.devoTotal - dreData.devoB2W;
         dreData["vendasLojaFisica"] = getTotalVendas[0].totalvendas - dreData.vendasOnline;
         dreData["percentFisica"] = ((dreData["vendasLojaFisica"] / dreData["vendastotal"]) * 100).toFixed(2);
         dreData["percentOnline"] = ((dreData.vendasOnline / dreData["vendastotal"]) * 100).toFixed(2);
-        dreData["imposto"] = dreData.vendasBruta * 0.05;
+        // balanceProcessedData["imposto"] = balanceProcessedData.vendasBruta * 0.05;
 
         if (getVendasOnline.length > 0) {
           getVendasOnline.forEach(items => {
             if (items.cliente === "B2W") {
               dreData["B2W"] = items.totalvendas - dreData.devoB2W;
-              dreData["taxasB2W"] = dreData.B2W * 0.1225;
-              // dreData["freteB2W"] = items.totalvendas * 0.13;
+              // balanceProcessedData["taxasB2W"] = balanceProcessedData.B2W * 0.1225;
+              // balanceProcessedData["freteB2W"] = items.totalvendas * 0.13;
             }
             if (items.cliente === "MAGAZINE LUIZA") {
               dreData["magazineLuiza"] = items.totalvendas;
-              dreData["taxasMagazineLuiza"] = dreData.magazineLuiza * 0.12;
+              // balanceProcessedData["taxasMagazineLuiza"] = balanceProcessedData.magazineLuiza * 0.12;
             }
             if (items.cliente === "Mercado Livre") {
               dreData["mercadoPago"] = items.totalvendas;
-              dreData["taxasMercadoPago"] = dreData.mercadoPago * 0.05;
+              // balanceProcessedData["taxasMercadoPago"] = balanceProcessedData.mercadoPago * 0.05;
             }
           });
         } else {
           dreData["B2W"] = 0;
-          dreData["taxasB2W"] = 0;
-          dreData["freteB2W"] = 0;
+          // balanceProcessedData["taxasB2W"] = 0;
+          // balanceProcessedData["freteB2W"] = 0;
           dreData["magazineLuiza"] = 0;
-          dreData["taxasMagazineLuiza"] = 0;
+          // balanceProcessedData["taxasMagazineLuiza"] = 0;
           dreData["mercadoPago"] = 0;
-          dreData["taxasMercadoPago"] = 0;
-
+          // balanceProcessedData["taxasMercadoPago"] = 0;
+  
         }
 
         const { data: getVendasDRE } = await Axios.get("http://localhost:5000/vendasdre", {
@@ -272,7 +295,7 @@ function VendasDados({ prevBalanceDate, currentBalanceDate, newBalanceDate, setN
       </div>
 
       <div className="col-lg-3">
-        <h3 className="mt-2">DRE </h3>
+        <h3 className="mt-2">DRE V2 </h3>
 
         <table className="table table-striped table-sm table-hover mt-4">
           <thead>
@@ -288,7 +311,7 @@ function VendasDados({ prevBalanceDate, currentBalanceDate, newBalanceDate, setN
             </tr>
             <tr>
               <td>(-) Devolucoes</td>
-              <td>R${formatNumber(balanceData.devoTotal)}</td>
+              <td>R${formatNumber(balanceData.devoTotal + balanceData.devoB2W)}</td>
             </tr>
             <tr>
               <td>
@@ -365,6 +388,7 @@ function VendasDados({ prevBalanceDate, currentBalanceDate, newBalanceDate, setN
               </tr>
               :
               null
+
             ))}
           </tbody>
         </table>
