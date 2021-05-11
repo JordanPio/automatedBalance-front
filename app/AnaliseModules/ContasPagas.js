@@ -8,7 +8,7 @@ function ContasPagas({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
   const [state, setState] = useImmer({
     detailsPgs: [],
     totalContasPgs: [],
-    datesPgs: []
+    datesPgs: [],
   });
 
   const genRandomId = function () {
@@ -17,23 +17,25 @@ function ContasPagas({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
 
   const formatNumbers = function (params) {
     if (typeof params === "number") {
-      return params.toLocaleString(navigator.language, { maximumFractionDigits: 2 });
+      return params.toLocaleString(navigator.language, {
+        maximumFractionDigits: 2,
+      });
     } else {
       return 0;
     }
   };
 
-  let pgsChartLabel = state.datesPgs.map(items => {
+  let pgsChartLabel = state.datesPgs.map((items) => {
     return `${new Date(items).getMonth() + 1}/${new Date(items).getFullYear()}`;
   });
 
   let pgsChartValues = [];
 
-  state.totalContasPgs.forEach(items => {
+  state.totalContasPgs.forEach((items) => {
     let outro = {};
     outro["conta"] = items.conta;
     outro["values"] = [];
-    state.datesPgs.forEach(data => {
+    state.datesPgs.forEach((data) => {
       if (items[data]) {
         outro.values.push(items[data]);
       } else {
@@ -53,24 +55,24 @@ function ContasPagas({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
         data: items.values,
         backgroundColor: `#${chartColour[index]}`,
         borderColor: `#${chartColour[index]}`,
-        fill: true
+        fill: true,
       };
-    })
+    }),
   };
 
   const options = {
     scales: {
       xAxes: [
         {
-          stacked: true
-        }
+          stacked: true,
+        },
       ],
       yAxes: [
         {
-          stacked: true
-        }
-      ]
-    }
+          stacked: true,
+        },
+      ],
+    },
   };
 
   let barChartPgs = {
@@ -80,9 +82,9 @@ function ContasPagas({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
         label: items.conta,
         data: items.values,
         backgroundColor: `#${chartColour[index]}`,
-        fill: true
+        fill: true,
       };
-    })
+    }),
   };
 
   useEffect(() => {
@@ -91,21 +93,27 @@ function ContasPagas({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
 
   async function getContasPagasData() {
     try {
-      const pagasByContas = await Axios.get("http://localhost:5000/pagasByContas", {
-        params: {
-          currentBalanceDate: currentBalanceDate,
-          prevBalanceDate: prevBalanceDate,
-          newBalanceDate: newBalanceDate
+      const pagasByContas = await Axios.get(
+        "http://localhost:5000/pagasByContas",
+        {
+          params: {
+            currentBalanceDate: currentBalanceDate,
+            prevBalanceDate: prevBalanceDate,
+            newBalanceDate: newBalanceDate,
+          },
         }
-      });
+      );
 
-      const pagasDetails = await Axios.get("http://localhost:5000/pagasByDescricao", {
-        params: {
-          currentBalanceDate: currentBalanceDate,
-          prevBalanceDate: prevBalanceDate,
-          newBalanceDate: newBalanceDate
+      const pagasDetails = await Axios.get(
+        "http://localhost:5000/pagasByDescricao",
+        {
+          params: {
+            currentBalanceDate: currentBalanceDate,
+            prevBalanceDate: prevBalanceDate,
+            newBalanceDate: newBalanceDate,
+          },
         }
-      });
+      );
 
       let totalContasPgs = [];
 
@@ -154,9 +162,13 @@ function ContasPagas({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
 
       let datesPgs = [];
 
-      detailsPgs.forEach(element => {
-        Object.keys(element).forEach(e => {
-          if (e !== "conta" && e !== "descricao" && datesPgs.includes(e) === false) {
+      detailsPgs.forEach((element) => {
+        Object.keys(element).forEach((e) => {
+          if (
+            e !== "conta" &&
+            e !== "descricao" &&
+            datesPgs.includes(e) === false
+          ) {
             datesPgs.push(e);
           }
         });
@@ -164,7 +176,7 @@ function ContasPagas({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
 
       datesPgs = datesPgs.sort();
 
-      setState(draft => {
+      setState((draft) => {
         draft.totalContasPgs = totalContasPgs;
         draft.detailsPgs = detailsPgs;
         draft.datesPgs = datesPgs;
@@ -177,78 +189,120 @@ function ContasPagas({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
   return (
     <>
       {/* <div className="col"> */}
-        <div className="col-lg-7">
-          <h3 className="text-center mt-2"> Analise Despesas em {newBalanceDate ? `${new Date(newBalanceDate).getDate()}/${new Date(newBalanceDate).getMonth() + 1}/${new Date(newBalanceDate).getFullYear()}` : `${new Date(currentBalanceDate).getDate()}/${new Date(currentBalanceDate).getMonth() + 1}/${new Date(currentBalanceDate).getFullYear()}`}</h3>
+      <div className="col-lg-7">
+        <h3 className="text-center mt-2">
+          {" "}
+          Analise Despesas em{" "}
+          {newBalanceDate
+            ? `${new Date(newBalanceDate).getDate()}/${
+                new Date(newBalanceDate).getMonth() + 1
+              }/${new Date(newBalanceDate).getFullYear()}`
+            : `${new Date(currentBalanceDate).getDate()}/${
+                new Date(currentBalanceDate).getMonth() + 1
+              }/${new Date(currentBalanceDate).getFullYear()}`}
+        </h3>
 
-          <table className="table table-sm table-bordered table-hover mt-5">
-            <thead>
-              <tr>
-                <th>Contas</th>
-                {state.datesPgs.map(items => (
-                  <th key={genRandomId()}>{`${new Date(items).getDate()}/${new Date(items).getMonth() + 1}/${new Date(items).getFullYear()}`}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {state.totalContasPgs.map(e => (
-                <tr key={genRandomId()} className="table-plain">
-                  <td className="text-nowrap font-weight-bold" data-toggle="collapse" data-target={`.${e.conta.slice(0, 4)}`} aria-expanded="true" aria-controls={e.conta}>
-                    {e.conta}
-
-                    {state.detailsPgs.map(det => {
-                      if (det.conta === e.conta) {
-                        return (
-                          <div key={genRandomId()} id={det.descricao} className={`${e.conta.slice(0, 4)} collapse font-weight-light text-dark text-lowercase`} aria-labelledby={e.conta}>
-                            {det.descricao}
-                          </div>
-                        );
-                      } else {
-                        return null;
-                      }
-                    })}
-                  </td>
-                  {state.datesPgs.map(data =>
-                    e[data] ? (
-                      <td key={genRandomId()} data-toggle="collapse" data-target={`.${e.conta.slice(0, 4)}`} aria-expanded="false" aria-controls={e.conta}>
-                        R${formatNumbers(e[data])}
-                        {state.detailsPgs.map(detalhe => {
-                          if (detalhe.conta === e.conta) {
-                            if (detalhe[data] > 0) {
-                              return (
-                                <div key={genRandomId()} id={detalhe.descricao} className={`${e.conta.slice(0, 4)} collapse`} aria-labelledby={`${e.conta}`}>
-                                  R${formatNumbers(detalhe[data])}
-                                </div>
-                              );
-                            } else {
-                              return (
-                                <div key={genRandomId()} id={detalhe.descricao} className={`${e.conta.slice(0, 4)} collapse`} aria-labelledby={`${e.conta}`}>
-                                  R$0
-                                </div>
-                              );
-                            }
-                          } else {
-                            return null;
-                          }
-                        })}
-                      </td>
-                    ) : (
-                      <td key={genRandomId()}></td>
-                    )
-                  )}
-                </tr>
+        <table className="table table-sm table-bordered table-hover mt-5">
+          <thead>
+            <tr>
+              <th>Contas</th>
+              {state.datesPgs.map((items) => (
+                <th key={genRandomId()}>{`${new Date(items).getDate()}/${
+                  new Date(items).getMonth() + 1
+                }/${new Date(items).getFullYear()}`}</th>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </tr>
+          </thead>
+          <tbody>
+            {state.totalContasPgs.map((e) => (
+              <tr key={genRandomId()} className="table-plain">
+                <td
+                  className="text-nowrap font-weight-bold"
+                  data-toggle="collapse"
+                  data-target={`.${e.conta.slice(0, 4)}`}
+                  aria-expanded="true"
+                  aria-controls={e.conta}
+                >
+                  {e.conta}
 
-        <div className="col-lg-5">
-          <h3 className="mt-4 text-center"> Despesas Mes </h3>
+                  {state.detailsPgs.map((det) => {
+                    if (det.conta === e.conta) {
+                      return (
+                        <div
+                          key={genRandomId()}
+                          id={det.descricao}
+                          className={`${e.conta.slice(
+                            0,
+                            4
+                          )} collapse font-weight-light text-dark text-lowercase`}
+                          aria-labelledby={e.conta}
+                        >
+                          {det.descricao}
+                        </div>
+                      );
+                    } else {
+                      return null;
+                    }
+                  })}
+                </td>
+                {state.datesPgs.map((data) =>
+                  e[data] ? (
+                    <td
+                      key={genRandomId()}
+                      data-toggle="collapse"
+                      data-target={`.${e.conta.slice(0, 4)}`}
+                      aria-expanded="false"
+                      aria-controls={e.conta}
+                    >
+                      R${formatNumbers(e[data])}
+                      {state.detailsPgs.map((detalhe) => {
+                        if (detalhe.conta === e.conta) {
+                          if (detalhe[data] > 0) {
+                            return (
+                              <div
+                                key={genRandomId()}
+                                id={detalhe.descricao}
+                                className={`${e.conta.slice(0, 4)} collapse`}
+                                aria-labelledby={`${e.conta}`}
+                              >
+                                R${formatNumbers(detalhe[data])}
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div
+                                key={genRandomId()}
+                                id={detalhe.descricao}
+                                className={`${e.conta.slice(0, 4)} collapse`}
+                                aria-labelledby={`${e.conta}`}
+                              >
+                                R$0
+                              </div>
+                            );
+                          }
+                        } else {
+                          return null;
+                        }
+                      })}
+                    </td>
+                  ) : (
+                    <td key={genRandomId()}></td>
+                  )
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-          <Bar data={barChartPgs} options={options} />
-          <h3 className="mt-4 text-center"> Despesas Mes</h3>
+      <div className="col-lg-5">
+        <h3 className="mt-4 text-center"> Despesas Mes </h3>
 
-          <Line data={lineChartPgs} />
-        </div>
+        <Bar data={barChartPgs} options={options} />
+        <h3 className="mt-4 text-center"> Despesas Mes</h3>
+
+        <Line data={lineChartPgs} />
+      </div>
       {/* </div> */}
     </>
   );

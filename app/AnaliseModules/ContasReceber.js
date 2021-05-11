@@ -3,7 +3,12 @@ import { Polar } from "react-chartjs-2";
 import Axios from "axios";
 // import StateContext from "../StateContext";
 
-function ContasReceber({ prevBalanceDate, currentBalanceDate, newBalanceDate, setNewBalDataUpdate }) {
+function ContasReceber({
+  prevBalanceDate,
+  currentBalanceDate,
+  newBalanceDate,
+  setNewBalDataUpdate,
+}) {
   const [receberTabela, setReceberTabela] = useState([]);
   const [receberAtrasadas, setReceberAtrasadas] = useState([]);
   const [detalhes, setDetalhes] = useState([]);
@@ -19,12 +24,18 @@ function ContasReceber({ prevBalanceDate, currentBalanceDate, newBalanceDate, se
     datasets: [
       {
         label: "Atrasadas",
-        backgroundColor: ["#FF6384", "#4BC0C0", "#FFCE56", "#E7E9ED", "#36A2EB"],
+        backgroundColor: [
+          "#FF6384",
+          "#4BC0C0",
+          "#FFCE56",
+          "#E7E9ED",
+          "#36A2EB",
+        ],
         borderColor: "rgba(0,0,0,1)",
         borderWidth: 2,
-        data: [detalhes.PercentEmDia, detalhes.percentAtrasadas]
-      }
-    ]
+        data: [detalhes.PercentEmDia, detalhes.percentAtrasadas],
+      },
+    ],
   };
 
   useEffect(() => {
@@ -34,39 +45,57 @@ function ContasReceber({ prevBalanceDate, currentBalanceDate, newBalanceDate, se
   async function getContasReceberData() {
     try {
       // Get Receber Details
-      const responseTabela = await Axios.get("http://localhost:5000/receberTabela", {
-        params: {
-          newDate: newBalanceDate,
-          currentDate: currentBalanceDate
+      const responseTabela = await Axios.get(
+        "http://localhost:5000/receberTabela",
+        {
+          params: {
+            newBalanceDate,
+            currentBalanceDate,
+          },
         }
-      });
+      );
       const jsonDataReceber = await [...responseTabela.data];
-      const totalReceber = jsonDataReceber.reduce((a, b) => ({ total: a.total + b.total }));
+      const totalReceber = jsonDataReceber.reduce((a, b) => ({
+        total: a.total + b.total,
+      }));
 
-      const resRecAt = await Axios.get("http://localhost:5000/receberAtrasadas", {
-        params: {
-          newDate: newBalanceDate,
-          currentDate: currentBalanceDate
+      const resRecAt = await Axios.get(
+        "http://localhost:5000/receberAtrasadas",
+        {
+          params: {
+            newBalanceDate,
+            currentBalanceDate,
+          },
         }
-      });
+      );
       const jsonRecAt = await [...resRecAt.data];
 
       let totAtrasadas = {};
       let detalhesReceber = {};
 
       if (jsonRecAt.length > 0) {
-        totAtrasadas = jsonRecAt.reduce((a, b) => ({ total: a.total + b.total }));
+        totAtrasadas = jsonRecAt.reduce((a, b) => ({
+          total: a.total + b.total,
+        }));
       } else {
         totAtrasadas["total"] = 0;
       }
 
-      detalhesReceber["contasReceber"] = Math.round(totalReceber.total * 100) / 100;
+      detalhesReceber["contasReceber"] =
+        Math.round(totalReceber.total * 100) / 100;
       detalhesReceber["receberAtrasadas"] = totAtrasadas.total.toFixed(2);
-      detalhesReceber["PercentEmDia"] = (((totalReceber.total - totAtrasadas.total) / totalReceber.total) * 100).toFixed(2);
-      detalhesReceber["percentAtrasadas"] = ((totAtrasadas.total / totalReceber.total) * 100).toFixed(2);
+      detalhesReceber["PercentEmDia"] = (
+        ((totalReceber.total - totAtrasadas.total) / totalReceber.total) *
+        100
+      ).toFixed(2);
+      detalhesReceber["percentAtrasadas"] = (
+        (totAtrasadas.total / totalReceber.total) *
+        100
+      ).toFixed(2);
 
       if (newBalanceDate.length > 0) {
-        await updateDbContasReceber(detalhesReceber.contasReceber);}
+        await updateDbContasReceber(detalhesReceber.contasReceber);
+      }
 
       setReceberTabela(jsonDataReceber);
       setReceberAtrasadas(jsonRecAt);
@@ -77,19 +106,32 @@ function ContasReceber({ prevBalanceDate, currentBalanceDate, newBalanceDate, se
   }
 
   async function updateDbContasReceber(currentTotalReceber) {
-    const receberInsert = await Axios.post("http://localhost:5000/insertBalance", { data: { tipo: "Ativo Circulante", conta: "Contas a Receber Clientes (Boletos+ cheques ((Excluir cartoes a Receber)))", total: currentTotalReceber, date: newBalanceDate } }, { timeout: 0 })
-      .then(resp => {
+    const receberInsert = await Axios.post(
+      "http://localhost:5000/insertBalance",
+      {
+        data: {
+          tipo: "Ativo Circulante",
+          conta:
+            "Contas a Receber Clientes (Boletos+ cheques ((Excluir cartoes a Receber)))",
+          total: currentTotalReceber,
+          date: newBalanceDate,
+        },
+      },
+      { timeout: 0 }
+    )
+      .then((resp) => {
         if (resp) {
-
         }
         // if resp.data = something we update state - this will automatically-re render the component
       })
-      .catch(err => {
+      .catch((err) => {
         console.log(err.data);
       });
 
-      await console.log("Succesfully Added new scraped values into ContasReceber");
-      await setNewBalDataUpdate()
+    await console.log(
+      "Succesfully Added new scraped values into ContasReceber"
+    );
+    await setNewBalDataUpdate();
   }
 
   return (
@@ -97,7 +139,15 @@ function ContasReceber({ prevBalanceDate, currentBalanceDate, newBalanceDate, se
       <div>
         <div>
           <h3 className="text-center mt-2">
-            Total Contas a Receber em {newBalanceDate ? `${new Date(newBalanceDate).getDate()}/${new Date(newBalanceDate).getMonth() + 1}/${new Date(newBalanceDate).getFullYear()}` : `${new Date(currentBalanceDate).getDate()}/${new Date(currentBalanceDate).getMonth() + 1}/${new Date(currentBalanceDate).getFullYear()}`} R${detalhes.contasReceber}
+            Total Contas a Receber em{" "}
+            {newBalanceDate
+              ? `${new Date(newBalanceDate).getDate()}/${
+                  new Date(newBalanceDate).getMonth() + 1
+                }/${new Date(newBalanceDate).getFullYear()}`
+              : `${new Date(currentBalanceDate).getDate()}/${
+                  new Date(currentBalanceDate).getMonth() + 1
+                }/${new Date(currentBalanceDate).getFullYear()}`}{" "}
+            R${detalhes.contasReceber}
           </h3>
         </div>
         <div className="d-inline-flex col">

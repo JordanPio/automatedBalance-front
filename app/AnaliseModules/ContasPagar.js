@@ -59,8 +59,8 @@ function ContasPagar({
     try {
       const resPagar = await Axios.get("http://localhost:5000/pagarTabela", {
         params: {
-          newDate: newBalanceDate,
-          currentDate: currentBalanceDate,
+          newBalanceDate,
+          currentBalanceDate,
         },
       });
       const jsonPagarTab = await [...resPagar.data];
@@ -79,8 +79,8 @@ function ContasPagar({
         "http://localhost:5000/totalPagar",
         {
           params: {
-            newDate: newBalanceDate,
-            currentDate: currentBalanceDate,
+            newBalanceDate,
+            currentBalanceDate,
           },
         }
       );

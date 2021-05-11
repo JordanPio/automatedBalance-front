@@ -24,7 +24,7 @@ function BalanceSheet() {
     analysis: {},
     sendCount: 0,
     newBalDataUpdateCount: 0,
-    isSaving: false
+    isSaving: false,
   });
 
   const genRandomId = function () {
@@ -33,28 +33,47 @@ function BalanceSheet() {
 
   function createNewBalHandlerBt(e) {
     e.preventDefault();
-    setState(draft => {
+    setState((draft) => {
       draft.sendCount++;
     });
   }
 
-  let chartColours = ["#90EE90", "#B0C4DE", "#FFD700", "#FFC0CB", "#FFF0F5", "#E6E6FA", "#F0F8FF", "#FFE4E1", "#FFFACD", "#F8F8FF", "#DCDCDC", "#FFF8DC"];
+  let chartColours = [
+    "#90EE90",
+    "#B0C4DE",
+    "#FFD700",
+    "#FFC0CB",
+    "#FFF0F5",
+    "#E6E6FA",
+    "#F0F8FF",
+    "#FFE4E1",
+    "#FFFACD",
+    "#F8F8FF",
+    "#DCDCDC",
+    "#FFF8DC",
+  ];
 
   let crescPatLiqData = [];
 
   let chartPatLiqLabels = [];
-  
+
   // // console.log("can you see this", state.analysis.lucroMensal.length);
   if (state.analysis.lucroMensal) {
-    state.dates.forEach(items => {
-      if (items.select === true && state.analysis.crescPeriodo[items.data] !== undefined) {
-        chartPatLiqLabels.push(`${new Date(items.data).getDate()}/${new Date(items.data).getMonth() + 1}/${new Date(items.data).getFullYear()}`);
+    state.dates.forEach((items) => {
+      if (
+        items.select === true &&
+        state.analysis.crescPeriodo[items.data] !== undefined
+      ) {
+        chartPatLiqLabels.push(
+          `${new Date(items.data).getDate()}/${
+            new Date(items.data).getMonth() + 1
+          }/${new Date(items.data).getFullYear()}`
+        );
         // console.log(state.analysis);
         crescPatLiqData.push(state.analysis.lucroMensal[items.data].toFixed(2));
       }
     });
   }
-
 
   const chartCrescPatLiq = {
     labels: chartPatLiqLabels,
@@ -62,30 +81,28 @@ function BalanceSheet() {
       {
         label: "Periodo",
         data: crescPatLiqData,
-        backgroundColor: chartColours
-      }
-    ]
+        backgroundColor: chartColours,
+      },
+    ],
   };
 
   useEffect(() => {
-      getData()
+    getData();
   }, []);
 
   useEffect(() => {
-    if(state.totais.Ativo) analysisTableData()
+    if (state.totais.Ativo) analysisTableData();
   }, [state.dates]);
-
 
   useEffect(() => {
     if (state.newBalDataUpdateCount === 3) {
-      getData()
+      getData();
     }
   }, [state.newBalDataUpdateCount]);
 
-
   useEffect(() => {
     if (state.sendCount) {
-      setState(draft => {
+      setState((draft) => {
         draft.isSaving = true;
       });
       createNewBalance();
@@ -93,127 +110,150 @@ function BalanceSheet() {
   }, [state.sendCount]);
 
   async function getData() {
-      try {
-        const getBalanceData = await fetch("http://localhost:5000/balance");
-        const jsonBalanceData = await getBalanceData.json(); // agg object!
+    try {
+      const getBalanceData = await fetch("http://localhost:5000/balance");
+      const jsonBalanceData = await getBalanceData.json(); // agg object!
 
-        let RefactoredBalanceData = [];
-        let balanceDates = [];
-        let balanceValues = [];
-        let TotalsPerAccount = [];
-        // let analysisPerPeriod = {};
+      let RefactoredBalanceData = [];
+      let balanceDates = [];
+      let balanceValues = [];
+      let TotalsPerAccount = [];
+      // let analysisPerPeriod = {};
 
-        (function refactorData() {
-          TotalsPerAccount["Ativo Circulante"] = {};
-          TotalsPerAccount["Ativo Permanente"] = {};
-          TotalsPerAccount["Ativo"] = {};
-          TotalsPerAccount["Passivo"] = {};
-          TotalsPerAccount["Passivo Circulante"] = {};
-          TotalsPerAccount["Passivo Exigivel a Longo Prazo"] = {};
-          TotalsPerAccount["Patrimonio Liquido"] = {};
-          TotalsPerAccount["Capital Social"] = {};
-          TotalsPerAccount["Lucro Exercicio"] = {};
-          TotalsPerAccount["DifAtivPassiv"] = {};
+      (function refactorData() {
+        TotalsPerAccount["Ativo Circulante"] = {};
+        TotalsPerAccount["Ativo Permanente"] = {};
+        TotalsPerAccount["Ativo"] = {};
+        TotalsPerAccount["Passivo"] = {};
+        TotalsPerAccount["Passivo Circulante"] = {};
+        TotalsPerAccount["Passivo Exigivel a Longo Prazo"] = {};
+        TotalsPerAccount["Patrimonio Liquido"] = {};
+        TotalsPerAccount["Capital Social"] = {};
+        TotalsPerAccount["Lucro Exercicio"] = {};
+        TotalsPerAccount["DifAtivPassiv"] = {};
 
-          for (let i = 0; i < jsonBalanceData.length; i++) {
-            balanceDates = Object.keys(jsonBalanceData[i].json_object_agg);
-            balanceValues = Object.values(jsonBalanceData[i].json_object_agg);
+        for (let i = 0; i < jsonBalanceData.length; i++) {
+          balanceDates = Object.keys(jsonBalanceData[i].json_object_agg);
+          balanceValues = Object.values(jsonBalanceData[i].json_object_agg);
 
-            let tempRefactBalData = {};
-            tempRefactBalData["conta"] = jsonBalanceData[i].conta;
-            tempRefactBalData["tipo"] = jsonBalanceData[i].tipo;
+          let tempRefactBalData = {};
+          tempRefactBalData["conta"] = jsonBalanceData[i].conta;
+          tempRefactBalData["tipo"] = jsonBalanceData[i].tipo;
 
-            for (let j = 0; j < balanceDates.length; j++) {
-              let date = balanceDates[j];
-              let value = balanceValues[j];
-              tempRefactBalData[date] = value;
+          for (let j = 0; j < balanceDates.length; j++) {
+            let date = balanceDates[j];
+            let value = balanceValues[j];
+            tempRefactBalData[date] = value;
 
-              // // Initiate object for adding calculated totals
-              TotalsPerAccount["Ativo Circulante"][date] = 0;
-              TotalsPerAccount["Ativo Permanente"][date] = 0;
-              TotalsPerAccount["Ativo"][date] = 0;
-              TotalsPerAccount["Passivo"][date] = 0;
-              TotalsPerAccount["Passivo Circulante"][date] = 0;
-              TotalsPerAccount["Passivo Exigivel a Longo Prazo"][date] = 0;
-              TotalsPerAccount["Patrimonio Liquido"][date] = 0;
-              TotalsPerAccount["Capital Social"][date] = 0;
-              TotalsPerAccount["Lucro Exercicio"][date] = 0;
-              TotalsPerAccount["DifAtivPassiv"][date] = 0;
-            }
-
-            RefactoredBalanceData.push(tempRefactBalData);
+            // // Initiate object for adding calculated totals
+            TotalsPerAccount["Ativo Circulante"][date] = 0;
+            TotalsPerAccount["Ativo Permanente"][date] = 0;
+            TotalsPerAccount["Ativo"][date] = 0;
+            TotalsPerAccount["Passivo"][date] = 0;
+            TotalsPerAccount["Passivo Circulante"][date] = 0;
+            TotalsPerAccount["Passivo Exigivel a Longo Prazo"][date] = 0;
+            TotalsPerAccount["Patrimonio Liquido"][date] = 0;
+            TotalsPerAccount["Capital Social"][date] = 0;
+            TotalsPerAccount["Lucro Exercicio"][date] = 0;
+            TotalsPerAccount["DifAtivPassiv"][date] = 0;
           }
 
-          // Calculating Totals in agg object
-          RefactoredBalanceData.forEach(items => {
-            if (items.tipo === "Ativo Circulante") {
-              balanceDates.forEach(dt => {
-                items[dt] !== undefined ? (TotalsPerAccount["Ativo Circulante"][dt] = TotalsPerAccount["Ativo Circulante"][dt] + items[dt].f1) : (TotalsPerAccount["Ativo Circulante"][dt] = TotalsPerAccount["Ativo Circulante"][dt] + 0);
-              });
-            } else if (items.tipo === "Ativo Permanente") {
-              balanceDates.forEach(dt => {
-                TotalsPerAccount["Ativo Permanente"][dt] = TotalsPerAccount["Ativo Permanente"][dt] + items[dt].f1;
-              });
-            } else if (items.tipo === "Passivo Circulante") {
-              balanceDates.forEach(dt => {
-                if (items[dt] !== undefined) {
-                  TotalsPerAccount["Passivo Circulante"][dt] = TotalsPerAccount["Passivo Circulante"][dt] + items[dt].f1;
-                } else {
-                  TotalsPerAccount["Passivo Circulante"][dt] = TotalsPerAccount["Passivo Circulante"][dt] + 0;
-                }
-              });
-            } else if (items.tipo === "Patrimonio Liquido" || items.tipo === "Profit Loss") {
-              balanceDates.forEach(dt => {
-                if (items[dt] !== undefined) {
-                  TotalsPerAccount["Patrimonio Liquido"][dt] = TotalsPerAccount["Patrimonio Liquido"][dt] + items[dt].f1;
-                  if (items.conta === "Lucro Prejuizo do Exercicio") {
-                    TotalsPerAccount["Lucro Exercicio"][dt] = TotalsPerAccount["Lucro Exercicio"][dt] + items[dt].f1;
-                  }
-                } else {
-                  TotalsPerAccount["Patrimonio Liquido"][dt] = TotalsPerAccount["Patrimonio Liquido"][dt] + 0;
+          RefactoredBalanceData.push(tempRefactBalData);
+        }
 
-                  if (items.conta === "Lucro Prejuizo do Exercicio") {
-                    TotalsPerAccount["Lucro Exercicio"][dt] = TotalsPerAccount["Lucro Exercicio"][dt] + 0;
-                  }
+        // Calculating Totals in agg object
+        RefactoredBalanceData.forEach((items) => {
+          if (items.tipo === "Ativo Circulante") {
+            balanceDates.forEach((dt) => {
+              items[dt] !== undefined
+                ? (TotalsPerAccount["Ativo Circulante"][dt] =
+                    TotalsPerAccount["Ativo Circulante"][dt] + items[dt].f1)
+                : (TotalsPerAccount["Ativo Circulante"][dt] =
+                    TotalsPerAccount["Ativo Circulante"][dt] + 0);
+            });
+          } else if (items.tipo === "Ativo Permanente") {
+            balanceDates.forEach((dt) => {
+              TotalsPerAccount["Ativo Permanente"][dt] =
+                TotalsPerAccount["Ativo Permanente"][dt] + items[dt].f1;
+            });
+          } else if (items.tipo === "Passivo Circulante") {
+            balanceDates.forEach((dt) => {
+              if (items[dt] !== undefined) {
+                TotalsPerAccount["Passivo Circulante"][dt] =
+                  TotalsPerAccount["Passivo Circulante"][dt] + items[dt].f1;
+              } else {
+                TotalsPerAccount["Passivo Circulante"][dt] =
+                  TotalsPerAccount["Passivo Circulante"][dt] + 0;
+              }
+            });
+          } else if (
+            items.tipo === "Patrimonio Liquido" ||
+            items.tipo === "Profit Loss"
+          ) {
+            balanceDates.forEach((dt) => {
+              if (items[dt] !== undefined) {
+                TotalsPerAccount["Patrimonio Liquido"][dt] =
+                  TotalsPerAccount["Patrimonio Liquido"][dt] + items[dt].f1;
+                if (items.conta === "Lucro Prejuizo do Exercicio") {
+                  TotalsPerAccount["Lucro Exercicio"][dt] =
+                    TotalsPerAccount["Lucro Exercicio"][dt] + items[dt].f1;
                 }
-              });
-            } else if (items.tipo === "Passivo Exigivel a Longo Prazo") {
-              balanceDates.forEach(dt => {
-                if (items[dt] !== undefined) {
-                  TotalsPerAccount["Passivo Exigivel a Longo Prazo"][dt] = TotalsPerAccount["Passivo Exigivel a Longo Prazo"][dt] + items[dt].f1;
-                } else {
-                  TotalsPerAccount["Passivo Exigivel a Longo Prazo"][dt] = TotalsPerAccount["Passivo Exigivel a Longo Prazo"][dt] + 0;
+              } else {
+                TotalsPerAccount["Patrimonio Liquido"][dt] =
+                  TotalsPerAccount["Patrimonio Liquido"][dt] + 0;
+
+                if (items.conta === "Lucro Prejuizo do Exercicio") {
+                  TotalsPerAccount["Lucro Exercicio"][dt] =
+                    TotalsPerAccount["Lucro Exercicio"][dt] + 0;
                 }
-              });
-            }
-          });
-
-          balanceDates.forEach(dt => {
-            TotalsPerAccount["Ativo"][dt] = TotalsPerAccount["Ativo Circulante"][dt] + TotalsPerAccount["Ativo Permanente"][dt];
-            TotalsPerAccount["Passivo"][dt] = TotalsPerAccount["Patrimonio Liquido"][dt] + TotalsPerAccount["Passivo Circulante"][dt] + TotalsPerAccount["Passivo Exigivel a Longo Prazo"][dt];
-            TotalsPerAccount["DifAtivPassiv"][dt] = TotalsPerAccount["Ativo"][dt] - TotalsPerAccount["Passivo"][dt];
-          });
-        })();
-
-        const uniqDates = balanceDates.map(items => {
-          return { id: genRandomId(), data: items, select: true };
+              }
+            });
+          } else if (items.tipo === "Passivo Exigivel a Longo Prazo") {
+            balanceDates.forEach((dt) => {
+              if (items[dt] !== undefined) {
+                TotalsPerAccount["Passivo Exigivel a Longo Prazo"][dt] =
+                  TotalsPerAccount["Passivo Exigivel a Longo Prazo"][dt] +
+                  items[dt].f1;
+              } else {
+                TotalsPerAccount["Passivo Exigivel a Longo Prazo"][dt] =
+                  TotalsPerAccount["Passivo Exigivel a Longo Prazo"][dt] + 0;
+              }
+            });
+          }
         });
 
-        // // Update state to pass to other components
-        let currentBalanceDate = uniqDates.slice(-1)[0];
-        let prevBalanceDate = uniqDates.slice(-2)[0];
-
-        await setState(draft => {
-          draft.dates = uniqDates;
-          draft.dadosPivot = RefactoredBalanceData;
-          draft.totais = TotalsPerAccount;
-          // draft.analysis = analysisPerPeriod;
-          draft.currentBalanceDate = currentBalanceDate;
-          draft.prevBalanceDate = prevBalanceDate;
+        balanceDates.forEach((dt) => {
+          TotalsPerAccount["Ativo"][dt] =
+            TotalsPerAccount["Ativo Circulante"][dt] +
+            TotalsPerAccount["Ativo Permanente"][dt];
+          TotalsPerAccount["Passivo"][dt] =
+            TotalsPerAccount["Patrimonio Liquido"][dt] +
+            TotalsPerAccount["Passivo Circulante"][dt] +
+            TotalsPerAccount["Passivo Exigivel a Longo Prazo"][dt];
+          TotalsPerAccount["DifAtivPassiv"][dt] =
+            TotalsPerAccount["Ativo"][dt] - TotalsPerAccount["Passivo"][dt];
         });
-      } catch (error) {
-        console.error(error.message);
-      }
+      })();
+
+      const uniqDates = balanceDates.map((items) => {
+        return { id: genRandomId(), data: items, select: true };
+      });
+
+      // // Update state to pass to other components
+      let currentBalanceDate = uniqDates.slice(-1)[0];
+      let prevBalanceDate = uniqDates.slice(-2)[0];
+
+      await setState((draft) => {
+        draft.dates = uniqDates;
+        draft.dadosPivot = RefactoredBalanceData;
+        draft.totais = TotalsPerAccount;
+        // draft.analysis = analysisPerPeriod;
+        draft.currentBalanceDate = currentBalanceDate;
+        draft.prevBalanceDate = prevBalanceDate;
+      });
+    } catch (error) {
+      console.error(error.message);
+    }
   }
 
   async function createNewBalance() {
@@ -223,7 +263,10 @@ function BalanceSheet() {
 
       // this will be used for the databaseRequest
       let currentDateScrape = await dtConvert.format(new Date(), "dd-MM-yyyy");
-      let lastDateScrape = await dtConvert.format(parse(lastDate, "yyyy-MM-dd", new Date()), "dd-MM-yyyy");
+      let lastDateScrape = await dtConvert.format(
+        parse(lastDate, "yyyy-MM-dd", new Date()),
+        "dd-MM-yyyy"
+      );
 
       let daysAhead = await new Date(lastDate);
       await daysAhead.setDate(daysAhead.getDate() + 20);
@@ -231,11 +274,20 @@ function BalanceSheet() {
       daysAhead = await dtConvert.format(daysAhead, "yyyy-MM-dd", new Date());
 
       if (lastDate !== newBalanceDate && newBalanceDate >= daysAhead) {
-        const scrapeData = await Axios.post("http://localhost:5000/scrapeAll", { lastDate, currentDate: newBalanceDate, lastDateScrape, currentDateScrape }, { timeout: 0 })
-          .then(resp => {
+        const scrapeData = await Axios.post(
+          "http://localhost:5000/scrapeAll",
+          {
+            lastDate,
+            currentDate: newBalanceDate,
+            lastDateScrape,
+            currentDateScrape,
+          },
+          { timeout: 0 }
+        )
+          .then((resp) => {
             console.log(resp.data);
           })
-          .catch(err => {
+          .catch((err) => {
             console.log(err.data);
           });
 
@@ -249,12 +301,14 @@ function BalanceSheet() {
         // New Balance nao pode ser o trigger pra reload o balance component - tem que ser outro. Ai talvez eu use o redux
         // if updatedCount = certain number than run the content of the useEffect otherwise no
 
-        await setState(draft => {
+        await setState((draft) => {
           draft.isSaving = false;
           draft.newBalanceDate = newBalanceDate;
         });
       } else {
-        console.log("E muito cedo para rodar outro Balanco, data corrente menor que 30 dias");
+        console.log(
+          "E muito cedo para rodar outro Balanco, data corrente menor que 30 dias"
+        );
       }
     } catch (error) {
       console.error(error.message);
@@ -264,19 +318,20 @@ function BalanceSheet() {
   async function updateDbEntriesForNewNBalance(lastDate, newBalanceDate) {
     const getPrevEntries = await Axios.get("http://localhost:5000/edit", {
       params: {
-        date: lastDate
-      }
+        date: lastDate,
+      },
     });
     const prevEntries = await [...getPrevEntries.data];
 
     let dataBal = [];
-    await prevEntries.forEach(items => {
+    await prevEntries.forEach((items) => {
       let createBalData = {};
 
       if (
         items.tipo === "Ativo Permanente" || //
         items.conta === "Junior Investimento na Empresa" ||
-        items.conta === "Junior Participacao Lucro a receber (REF Periodo 2016 a 2017)" ||
+        items.conta ===
+          "Junior Participacao Lucro a receber (REF Periodo 2016 a 2017)" ||
         items.conta === "Paulo Participacao Lucro" ||
         items.conta === "Projeto 2019 Expansao Empresa (Fluxo Caixa)" ||
         items.conta.includes("Gastos com Cart") ||
@@ -320,21 +375,27 @@ function BalanceSheet() {
       }
     });
 
-    const insertNewBalanceDt = await Axios.post("http://localhost:5000/insertBalance", { dataBal }, { timeout: 0 })
-      .then(resp => {
+    const insertNewBalanceDt = await Axios.post(
+      "http://localhost:5000/insertBalance",
+      { dataBal },
+      { timeout: 0 }
+    )
+      .then((resp) => {
         if (resp.data) {
-          console.log("System finished adding new data to DB based on previous balance");
+          console.log(
+            "System finished adding new data to DB based on previous balance"
+          );
         }
       })
-      .catch(err => {
+      .catch((err) => {
         console.log(err, "error");
       });
   }
 
-function analysisTableData() {
+  function analysisTableData() {
     // // Calculated Data
     // console.log(state.totais, "totais")
-        let analysisPerPeriod = {};
+    let analysisPerPeriod = {};
 
     let datas = [];
     state.dates.forEach((dt, i, ar) => {
@@ -353,9 +414,14 @@ function analysisTableData() {
     let lucroMensal = {};
     for (let i = datas.length - 1; i >= 0; i--) {
       if (datas[i].select === true && datas[i - 1] !== undefined) {
-        circulante[datas[i].data] = state.totais["Ativo Circulante"][datas[i].data] / state.totais["Passivo Circulante"][datas[i].data];
-        crescPeriodo[datas[i].data] = state.totais["Lucro Exercicio"][datas[i].data];
-        liquidezGeral[datas[i].data] = state.totais["Ativo"][datas[i].data] / state.totais["Passivo Circulante"][datas[i].data];
+        circulante[datas[i].data] =
+          state.totais["Ativo Circulante"][datas[i].data] /
+          state.totais["Passivo Circulante"][datas[i].data];
+        crescPeriodo[datas[i].data] =
+          state.totais["Lucro Exercicio"][datas[i].data];
+        liquidezGeral[datas[i].data] =
+          state.totais["Ativo"][datas[i].data] /
+          state.totais["Passivo Circulante"][datas[i].data];
 
         // // qtde meses que passou entre periodo
         (function calcProfitPeriod() {
@@ -365,17 +431,24 @@ function analysisTableData() {
           const d2M = new Date(datas[i - 1].data).getMonth();
 
           mesPeriodo[datas[i].data] = d1M + 12 * d1Y - (d2M + 12 * d2Y);
-          lucroMensal[datas[i].data] = crescPeriodo[datas[i].data] / mesPeriodo[datas[i].data];
+          lucroMensal[datas[i].data] =
+            crescPeriodo[datas[i].data] / mesPeriodo[datas[i].data];
         })();
 
         // Cover edge case for first balance (As we dont have the data anymore)
       } else if (datas[i].select === true) {
-        circulante[datas[i].data] = state.totais["Ativo Circulante"][datas[i].data] / state.totais["Passivo Circulante"][datas[i].data];
-        crescPeriodo[datas[i].data] = state.totais["Lucro Exercicio"][datas[i].data];
-        liquidezGeral[datas[i].data] = state.totais["Ativo"][datas[i].data] / state.totais["Passivo Circulante"][datas[i].data];
+        circulante[datas[i].data] =
+          state.totais["Ativo Circulante"][datas[i].data] /
+          state.totais["Passivo Circulante"][datas[i].data];
+        crescPeriodo[datas[i].data] =
+          state.totais["Lucro Exercicio"][datas[i].data];
+        liquidezGeral[datas[i].data] =
+          state.totais["Ativo"][datas[i].data] /
+          state.totais["Passivo Circulante"][datas[i].data];
 
         mesPeriodo[datas[i].data] = 22;
-        lucroMensal[datas[i].data] = crescPeriodo[datas[i].data] / mesPeriodo[datas[i].data];
+        lucroMensal[datas[i].data] =
+          crescPeriodo[datas[i].data] / mesPeriodo[datas[i].data];
       }
     }
     analysisPerPeriod.circulante = circulante;
@@ -383,11 +456,11 @@ function analysisTableData() {
     analysisPerPeriod.liquidezGeral = liquidezGeral;
     analysisPerPeriod.mesPeriodo = mesPeriodo;
     analysisPerPeriod.lucroMensal = lucroMensal;
-  
-    setState(draft => {
+
+    setState((draft) => {
       draft.analysis = analysisPerPeriod;
     });
-}
+  }
 
   function onChangeCheckBox(e) {
     let objCheckbox = e.target.checked;
@@ -413,7 +486,7 @@ function analysisTableData() {
     let updatedCurrentDate = tempDatesSelected.pop();
     let updatedPrevtDate = tempDatesSelected.pop();
 
-    setState(draft => {
+    setState((draft) => {
       draft.dates[dateToChange.position].select = dateToChange.select;
       draft.currentBalanceDate = updatedCurrentDate;
       draft.prevBalanceDate = updatedPrevtDate;
@@ -421,9 +494,9 @@ function analysisTableData() {
   }
 
   function setNewBalDataUpdate() {
-    setState(draft => {
-      draft.newBalDataUpdateCount++
-    })
+    setState((draft) => {
+      draft.newBalDataUpdateCount++;
+    });
   }
 
   return (
@@ -433,25 +506,39 @@ function analysisTableData() {
           <h1 className="mt-2">Balance Sheet</h1>
         </div>
         <div className="col justify-content-center form-inline mt-2">
-          <button type="button" className="btn btn-outline-primary nowrap mr-sm-2" onClick={createNewBalHandlerBt} disabled={state.isSaving}>
+          <button
+            type="button"
+            className="btn btn-outline-primary nowrap mr-sm-2"
+            onClick={createNewBalHandlerBt}
+            disabled={state.isSaving}
+          >
             Criar novo Balanco
           </button>
           <div className="dropdown">
-            <button className="btn btn-primary dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <button
+              className="btn btn-primary dropdown-toggle"
+              type="button"
+              id="dropdownMenu2"
+              data-toggle="dropdown"
+              aria-haspopup="true"
+              aria-expanded="false"
+            >
               Dates
             </button>
             <div className="dropdown-menu" aria-labelledby="dropdownMenu2">
-              {state.dates.map(d => (
+              {state.dates.map((d) => (
                 <div className="dropdown-item" key={d.id}>
                   <input
                     type="checkbox"
                     checked={d.select}
                     id={d.id}
-                    onChange={e => {
+                    onChange={(e) => {
                       onChangeCheckBox(e);
                     }}
                   />
-                  {`${new Date(d.data).getDate()}/${new Date(d.data).getMonth() + 1}/${new Date(d.data).getFullYear()}`}
+                  {`${new Date(d.data).getDate()}/${
+                    new Date(d.data).getMonth() + 1
+                  }/${new Date(d.data).getFullYear()}`}
                 </div>
               ))}
             </div>
@@ -468,10 +555,14 @@ function analysisTableData() {
                 <tr>
                   <th>Periodo</th>
 
-                  {state.dates.map(datas =>
+                  {state.dates.map((datas) =>
                     datas.select === true ? (
                       <th key={datas.data}>
-                        <Link to={"/edit/" + datas.data}>{`${new Date(datas.data).getDate()}/${new Date(datas.data).getMonth() + 1}/${new Date(datas.data).getFullYear()}`}</Link>
+                        <Link to={"/edit/" + datas.data}>{`${new Date(
+                          datas.data
+                        ).getDate()}/${
+                          new Date(datas.data).getMonth() + 1
+                        }/${new Date(datas.data).getFullYear()}`}</Link>
                       </th>
                     ) : null
                   )}
@@ -481,14 +572,35 @@ function analysisTableData() {
                 {/* Total Ativo Circulante */}
                 <tr className="font-weight-bold table-info" key={genRandomId()}>
                   <td>Total do Ativo Circulante</td>
-                  {state.totais["Ativo Circulante"] ? state.dates.map(datas => (datas.select === true ? <td key={genRandomId()}>R${state.totais["Ativo Circulante"][datas.data].toLocaleString()}</td> : null)) : null}
+                  {state.totais["Ativo Circulante"]
+                    ? state.dates.map((datas) =>
+                        datas.select === true ? (
+                          <td key={genRandomId()}>
+                            R$
+                            {state.totais["Ativo Circulante"][
+                              datas.data
+                            ].toLocaleString()}
+                          </td>
+                        ) : null
+                      )
+                    : null}
                 </tr>
                 {/* Data */}
                 {state.dadosPivot.map((items, index) =>
                   items.tipo === "Ativo Circulante" ? (
                     <tr key={genRandomId()}>
                       <td>{items.conta}</td>
-                      {state.dates.map(datas => (datas.select === true ? items[datas.data] !== undefined ? <td key={items[datas.data].f2}>R${items[datas.data].f1.toLocaleString()}</td> : <td key={genRandomId()}>R$0</td> : null))}
+                      {state.dates.map((datas) =>
+                        datas.select === true ? (
+                          items[datas.data] !== undefined ? (
+                            <td key={items[datas.data].f2}>
+                              R${items[datas.data].f1.toLocaleString()}
+                            </td>
+                          ) : (
+                            <td key={genRandomId()}>R$0</td>
+                          )
+                        ) : null
+                      )}
                     </tr>
                   ) : null
                 )}
@@ -504,20 +616,49 @@ function analysisTableData() {
                 <tr>
                   <th>Periodo</th>
 
-                  {state.dates.map(datas => (datas.select === true ? <th key={genRandomId()}>{`${new Date(datas.data).getDate()}/${new Date(datas.data).getMonth() + 1}/${new Date(datas.data).getFullYear()}`}</th> : null))}
+                  {state.dates.map((datas) =>
+                    datas.select === true ? (
+                      <th key={genRandomId()}>{`${new Date(
+                        datas.data
+                      ).getDate()}/${
+                        new Date(datas.data).getMonth() + 1
+                      }/${new Date(datas.data).getFullYear()}`}</th>
+                    ) : null
+                  )}
                 </tr>
               </thead>
               <tbody>
                 <tr className="font-weight-bold table-info" key={genRandomId()}>
                   <td>Total do Ativo Permanente</td>
-                  {state.totais["Ativo Permanente"] ? state.dates.map(datas => (datas.select === true ? <td key={genRandomId()}>R${state.totais["Ativo Permanente"][datas.data].toLocaleString()}</td> : null)) : null}
+                  {state.totais["Ativo Permanente"]
+                    ? state.dates.map((datas) =>
+                        datas.select === true ? (
+                          <td key={genRandomId()}>
+                            R$
+                            {state.totais["Ativo Permanente"][
+                              datas.data
+                            ].toLocaleString()}
+                          </td>
+                        ) : null
+                      )
+                    : null}
                 </tr>
                 {state.dadosPivot.map((items, index) =>
                   items.tipo === "Ativo Permanente" ? (
                     <tr key={genRandomId()}>
                       <td>{items.conta}</td>
 
-                      {state.dates.map(datas => (datas.select === true ? items[datas.data] !== undefined ? <td key={items[datas.data].f2}>R${items[datas.data].f1.toLocaleString()}</td> : <td key={genRandomId()}>R$0</td> : null))}
+                      {state.dates.map((datas) =>
+                        datas.select === true ? (
+                          items[datas.data] !== undefined ? (
+                            <td key={items[datas.data].f2}>
+                              R${items[datas.data].f1.toLocaleString()}
+                            </td>
+                          ) : (
+                            <td key={genRandomId()}>R$0</td>
+                          )
+                        ) : null
+                      )}
                     </tr>
                   ) : null
                 )}
@@ -535,20 +676,49 @@ function analysisTableData() {
                 <tr>
                   <th>Periodo</th>
 
-                  {state.dates.map(datas => (datas.select === true ? <th key={genRandomId()}>{`${new Date(datas.data).getDate()}/${new Date(datas.data).getMonth() + 1}/${new Date(datas.data).getFullYear()}`}</th> : null))}
+                  {state.dates.map((datas) =>
+                    datas.select === true ? (
+                      <th key={genRandomId()}>{`${new Date(
+                        datas.data
+                      ).getDate()}/${
+                        new Date(datas.data).getMonth() + 1
+                      }/${new Date(datas.data).getFullYear()}`}</th>
+                    ) : null
+                  )}
                 </tr>
               </thead>
               <tbody>
                 <tr className="font-weight-bold table-info" key={genRandomId()}>
                   <td>Total do Passivo Circulante</td>
-                  {state.totais["Passivo Circulante"] ? state.dates.map(datas => (datas.select === true ? <td key={genRandomId()}>R${state.totais["Passivo Circulante"][datas.data].toLocaleString()}</td> : null)) : null}
+                  {state.totais["Passivo Circulante"]
+                    ? state.dates.map((datas) =>
+                        datas.select === true ? (
+                          <td key={genRandomId()}>
+                            R$
+                            {state.totais["Passivo Circulante"][
+                              datas.data
+                            ].toLocaleString()}
+                          </td>
+                        ) : null
+                      )
+                    : null}
                 </tr>
                 {state.dadosPivot.map((items, index) =>
                   items.tipo === "Passivo Circulante" ? (
                     <tr key={genRandomId()}>
                       <td>{items.conta}</td>
 
-                      {state.dates.map(datas => (datas.select === true ? items[datas.data] !== undefined ? <td key={items[datas.data].f2}>R${items[datas.data].f1.toLocaleString()}</td> : <td key={genRandomId()}>R$0</td> : null))}
+                      {state.dates.map((datas) =>
+                        datas.select === true ? (
+                          items[datas.data] !== undefined ? (
+                            <td key={items[datas.data].f2}>
+                              R${items[datas.data].f1.toLocaleString()}
+                            </td>
+                          ) : (
+                            <td key={genRandomId()}>R$0</td>
+                          )
+                        ) : null
+                      )}
                     </tr>
                   ) : null
                 )}
@@ -561,20 +731,49 @@ function analysisTableData() {
                 <tr>
                   <th>Periodo</th>
 
-                  {state.dates.map(datas => (datas.select === true ? <th key={genRandomId()}>{`${new Date(datas.data).getDate()}/${new Date(datas.data).getMonth() + 1}/${new Date(datas.data).getFullYear()}`}</th> : null))}
+                  {state.dates.map((datas) =>
+                    datas.select === true ? (
+                      <th key={genRandomId()}>{`${new Date(
+                        datas.data
+                      ).getDate()}/${
+                        new Date(datas.data).getMonth() + 1
+                      }/${new Date(datas.data).getFullYear()}`}</th>
+                    ) : null
+                  )}
                 </tr>
               </thead>
               <tbody>
                 <tr className="font-weight-bold table-info" key={genRandomId()}>
                   <td>Total do Exigivel Longo Prazo</td>
-                  {state.totais["Passivo Exigivel a Longo Prazo"] ? state.dates.map(datas => (datas.select === true ? <td key={genRandomId()}>R${state.totais["Passivo Exigivel a Longo Prazo"][datas.data].toLocaleString()}</td> : null)) : null}
+                  {state.totais["Passivo Exigivel a Longo Prazo"]
+                    ? state.dates.map((datas) =>
+                        datas.select === true ? (
+                          <td key={genRandomId()}>
+                            R$
+                            {state.totais["Passivo Exigivel a Longo Prazo"][
+                              datas.data
+                            ].toLocaleString()}
+                          </td>
+                        ) : null
+                      )
+                    : null}
                 </tr>
                 {state.dadosPivot.map((items, index) =>
                   items.tipo === "Passivo Exigivel a Longo Prazo" ? (
                     <tr key={genRandomId()}>
                       <td>{items.conta}</td>
 
-                      {state.dates.map(datas => (datas.select === true ? items[datas.data] !== undefined ? <td key={items[datas.data].f2}>R${items[datas.data].f1.toLocaleString()}</td> : <td key={genRandomId()}>R$0</td> : null))}
+                      {state.dates.map((datas) =>
+                        datas.select === true ? (
+                          items[datas.data] !== undefined ? (
+                            <td key={items[datas.data].f2}>
+                              R${items[datas.data].f1.toLocaleString()}
+                            </td>
+                          ) : (
+                            <td key={genRandomId()}>R$0</td>
+                          )
+                        ) : null
+                      )}
                     </tr>
                   ) : null
                 )}
@@ -586,26 +785,65 @@ function analysisTableData() {
                 <tr>
                   <th>Periodo</th>
 
-                  {state.dates.map(datas => (datas.select === true ? <th key={genRandomId()}>{`${new Date(datas.data).getDate()}/${new Date(datas.data).getMonth() + 1}/${new Date(datas.data).getFullYear()}`}</th> : null))}
+                  {state.dates.map((datas) =>
+                    datas.select === true ? (
+                      <th key={genRandomId()}>{`${new Date(
+                        datas.data
+                      ).getDate()}/${
+                        new Date(datas.data).getMonth() + 1
+                      }/${new Date(datas.data).getFullYear()}`}</th>
+                    ) : null
+                  )}
                 </tr>
               </thead>
               <tbody>
                 <tr className="font-weight-bold table-info" key={genRandomId()}>
                   <td>Total do Patrimonio Liquido</td>
-                  {state.totais["Patrimonio Liquido"] ? state.dates.map(datas => (datas.select === true ? <td key={genRandomId()}>R${state.totais["Patrimonio Liquido"][datas.data].toLocaleString()}</td> : null)) : null}
+                  {state.totais["Patrimonio Liquido"]
+                    ? state.dates.map((datas) =>
+                        datas.select === true ? (
+                          <td key={genRandomId()}>
+                            R$
+                            {state.totais["Patrimonio Liquido"][
+                              datas.data
+                            ].toLocaleString()}
+                          </td>
+                        ) : null
+                      )
+                    : null}
                 </tr>
                 {state.dadosPivot.map((items, index) =>
                   items.tipo === "Patrimonio Liquido" ? (
                     <tr key={genRandomId()}>
                       <td>{items.conta}</td>
 
-                      {state.dates.map(datas => (datas.select === true ? items[datas.data] !== undefined ? <td key={items[datas.data].f2}>R${items[datas.data].f1.toLocaleString()}</td> : <td key={genRandomId()}>R$0</td> : null))}
+                      {state.dates.map((datas) =>
+                        datas.select === true ? (
+                          items[datas.data] !== undefined ? (
+                            <td key={items[datas.data].f2}>
+                              R${items[datas.data].f1.toLocaleString()}
+                            </td>
+                          ) : (
+                            <td key={genRandomId()}>R$0</td>
+                          )
+                        ) : null
+                      )}
                     </tr>
                   ) : items.tipo === "Profit Loss" ? (
                     <tr key={genRandomId()}>
                       <td>{items.conta}</td>
 
-                      {state.dates.map(datas => (datas.select === true ? items[datas.data] !== undefined ? <td key={items[datas.data].f2}>R${items[datas.data].f1.toLocaleString()}</td> : <td key={genRandomId()}>R$0</td> : null))}
+                      {state.dates.map((datas) =>
+                        datas.select === true ? (
+                          items[datas.data] !== undefined ? (
+                            <td key={items[datas.data].f2}>
+                              R${items[datas.data].f1.toLocaleString()}
+                            </td>
+                          ) : (
+                            <td key={genRandomId()}>R$0</td>
+                          )
+                        ) : null
+                      )}
                     </tr>
                   ) : null
                 )}
@@ -627,7 +865,14 @@ function analysisTableData() {
                 <th>Periodo</th>
 
                 {state.dates.map(
-                  datas => (datas.select === true ? <th key={genRandomId()}>{`${new Date(datas.data).getDate()}/${new Date(datas.data).getMonth() + 1}/${new Date(datas.data).getFullYear()}`}</th> : null)
+                  (datas) =>
+                    datas.select === true ? (
+                      <th key={genRandomId()}>{`${new Date(
+                        datas.data
+                      ).getDate()}/${
+                        new Date(datas.data).getMonth() + 1
+                      }/${new Date(datas.data).getFullYear()}`}</th>
+                    ) : null
                   // <th>{`${datas.}`}</th>
                 )}
               </tr>
@@ -636,43 +881,103 @@ function analysisTableData() {
             <tbody>
               <tr key={genRandomId()}>
                 <td>Total do Ativo</td>
-                {state.totais.Ativo ? state.dates.map(datas => (datas.select === true ? <td key={genRandomId()}>R${state.totais.Ativo[datas.data].toLocaleString()}</td> : null)) : null}
+                {state.totais.Ativo
+                  ? state.dates.map((datas) =>
+                      datas.select === true ? (
+                        <td key={genRandomId()}>
+                          R${state.totais.Ativo[datas.data].toLocaleString()}
+                        </td>
+                      ) : null
+                    )
+                  : null}
               </tr>
 
               {state.analysis.circulante ? (
                 <tr key={genRandomId()}>
                   <td>Indice Liquidez Geral</td>
-                  {state.dates.map(datas => (datas.select === true && state.analysis.liquidezGeral[datas.data] !== undefined ? <td key={genRandomId()}>{state.analysis.liquidezGeral[datas.data].toFixed(2)}</td> : null))}
+                  {state.dates.map((datas) =>
+                    datas.select === true &&
+                    state.analysis.liquidezGeral[datas.data] !== undefined ? (
+                      <td key={genRandomId()}>
+                        {state.analysis.liquidezGeral[datas.data].toFixed(2)}
+                      </td>
+                    ) : null
+                  )}
                 </tr>
               ) : null}
               {state.analysis.circulante ? (
                 <tr key={genRandomId()}>
                   <td>Indice Liquidez Seca</td>
-                  {state.dates.map(datas => (datas.select === true && state.analysis.circulante[datas.data] !== undefined ? <td key={genRandomId()}>{state.analysis.circulante[datas.data].toFixed(2)}</td> : null))}
+                  {state.dates.map((datas) =>
+                    datas.select === true &&
+                    state.analysis.circulante[datas.data] !== undefined ? (
+                      <td key={genRandomId()}>
+                        {state.analysis.circulante[datas.data].toFixed(2)}
+                      </td>
+                    ) : null
+                  )}
                 </tr>
               ) : null}
               {state.analysis.circulante ? (
                 <tr key={genRandomId()}>
                   <td>Lucro Periodo</td>
-                  {state.dates.map(datas => (datas.select === true && state.analysis.crescPeriodo[datas.data] !== undefined ? <td key={genRandomId()}>R${state.analysis.crescPeriodo[datas.data].toLocaleString()}</td> : null))}
+                  {state.dates.map((datas) =>
+                    datas.select === true &&
+                    state.analysis.crescPeriodo[datas.data] !== undefined ? (
+                      <td key={genRandomId()}>
+                        R$
+                        {state.analysis.crescPeriodo[
+                          datas.data
+                        ].toLocaleString()}
+                      </td>
+                    ) : null
+                  )}
                 </tr>
               ) : null}
               {state.analysis.circulante ? (
                 <tr key={genRandomId()}>
                   <td>Periodo</td>
-                  {state.dates.map(datas => (datas.select === true && state.analysis.mesPeriodo[datas.data] !== undefined ? <td key={genRandomId()}>{state.analysis.mesPeriodo[datas.data].toLocaleString()} Meses</td> : null))}
+                  {state.dates.map((datas) =>
+                    datas.select === true &&
+                    state.analysis.mesPeriodo[datas.data] !== undefined ? (
+                      <td key={genRandomId()}>
+                        {state.analysis.mesPeriodo[datas.data].toLocaleString()}{" "}
+                        Meses
+                      </td>
+                    ) : null
+                  )}
                 </tr>
               ) : null}
               {state.analysis.circulante ? (
                 <tr key={genRandomId()}>
                   <td>Lucro Mensal</td>
-                  {state.dates.map(datas => (datas.select === true && state.analysis.lucroMensal[datas.data] !== undefined ? <td key={genRandomId()}>R${state.analysis.lucroMensal[datas.data].toLocaleString()}</td> : null))}
+                  {state.dates.map((datas) =>
+                    datas.select === true &&
+                    state.analysis.lucroMensal[datas.data] !== undefined ? (
+                      <td key={genRandomId()}>
+                        R$
+                        {state.analysis.lucroMensal[
+                          datas.data
+                        ].toLocaleString()}
+                      </td>
+                    ) : null
+                  )}
                 </tr>
               ) : null}
               {state.totais.DifAtivPassiv ? (
                 <tr key={genRandomId()}>
                   <td>Ativo - Passivo</td>
-                  {state.dates.map(datas => (datas.select === true && state.totais.DifAtivPassiv[datas.data] !== undefined ? <td key={genRandomId()}>R${state.totais.DifAtivPassiv[datas.data].toLocaleString()}</td> : null))}
+                  {state.dates.map((datas) =>
+                    datas.select === true &&
+                    state.totais.DifAtivPassiv[datas.data] !== undefined ? (
+                      <td key={genRandomId()}>
+                        R$
+                        {state.totais.DifAtivPassiv[
+                          datas.data
+                        ].toLocaleString()}
+                      </td>
+                    ) : null
+                  )}
                 </tr>
               ) : null}
             </tbody>
@@ -683,30 +988,58 @@ function analysisTableData() {
           <Bar data={chartCrescPatLiq} />
         </div>
         <div className="col-lg-3">
-          <CashFlow prevBalanceDate={state.prevBalanceDate.data} currentBalanceDate={state.currentBalanceDate.data} newBalanceDate={state.newBalanceDate} />
+          <CashFlow
+            prevBalanceDate={state.prevBalanceDate.data}
+            currentBalanceDate={state.currentBalanceDate.data}
+            newBalanceDate={state.newBalanceDate}
+          />
         </div>
         {/* </div> */}
       </div>
       <div className="d-flex row mt-5">
         <div className="d-inline-flex col">
-          <VendasDados prevBalanceDate={state.prevBalanceDate.data} currentBalanceDate={state.currentBalanceDate.data} newBalanceDate={state.newBalanceDate} setNewBalDataUpdate={() => setNewBalDataUpdate() } />
+          <VendasDados
+            prevBalanceDate={state.prevBalanceDate.data}
+            currentBalanceDate={state.currentBalanceDate.data}
+            newBalanceDate={state.newBalanceDate}
+            setNewBalDataUpdate={() => setNewBalDataUpdate()}
+          />
         </div>
       </div>
       <div className="d-flex row mt-5">
         <div className="d-inline-flex col">
-          <VendasDados1 prevBalanceDate={state.prevBalanceDate.data} currentBalanceDate={state.currentBalanceDate.data} newBalanceDate={state.newBalanceDate} setNewBalDataUpdate={() => setNewBalDataUpdate() } />
+          <VendasDados1
+            prevBalanceDate={state.prevBalanceDate.data}
+            currentBalanceDate={state.currentBalanceDate.data}
+            newBalanceDate={state.newBalanceDate}
+            setNewBalDataUpdate={() => setNewBalDataUpdate()}
+          />
         </div>
       </div>
       <div className="d-flex row mt-5">
         <div className="col">
-          {/* <ContasReceber prevBalanceDate={state.prevBalanceDate.data} currentBalanceDate={state.currentBalanceDate.data} newBalanceDate={state.newBalanceDate} setNewBalDataUpdate={() => setNewBalDataUpdate() }/> */}
+          <ContasReceber
+            prevBalanceDate={state.prevBalanceDate.data}
+            currentBalanceDate={state.currentBalanceDate.data}
+            newBalanceDate={state.newBalanceDate}
+            setNewBalDataUpdate={() => setNewBalDataUpdate()}
+          />
         </div>
         <div className="col">
-          {/* <ContasPagar prevBalanceDate={state.prevBalanceDate.data} currentBalanceDate={state.currentBalanceDate.data} newBalanceDate={state.newBalanceDate} setNewBalDataUpdate={() => setNewBalDataUpdate() }/> */}
+          <ContasPagar
+            prevBalanceDate={state.prevBalanceDate.data}
+            currentBalanceDate={state.currentBalanceDate.data}
+            newBalanceDate={state.newBalanceDate}
+            setNewBalDataUpdate={() => setNewBalDataUpdate()}
+          />
         </div>
       </div>
       <div className="d-flex row mt-5">
-        {/* <ContasPagas prevBalanceDate={state.prevBalanceDate.data} currentBalanceDate={state.currentBalanceDate.data} newBalanceDate={state.newBalanceDate} /> */}
+        <ContasPagas
+          prevBalanceDate={state.prevBalanceDate.data}
+          currentBalanceDate={state.currentBalanceDate.data}
+          newBalanceDate={state.newBalanceDate}
+        />
       </div>
     </div>
   );
