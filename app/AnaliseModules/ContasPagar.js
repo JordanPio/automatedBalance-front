@@ -57,13 +57,15 @@ function ContasPagar({
 
   async function getContasApagarData() {
     try {
-      const resPagar = await Axios.get("http://localhost:5000/pagarTabela", {
-        params: {
-          newBalanceDate,
-          currentBalanceDate,
-        },
-      });
-      const jsonPagarTab = await [...resPagar.data];
+      const { data: jsonPagarTab } = await Axios.get(
+        "http://localhost:5000/pagarTabela",
+        {
+          params: {
+            newBalanceDate,
+            currentBalanceDate,
+          },
+        }
+      );
       setPagarTabela(jsonPagarTab);
 
       let fornecedores = {};
@@ -75,7 +77,7 @@ function ContasPagar({
         }
       });
 
-      const responsePagar = await Axios.get(
+      const { data: jsonDataPagar } = await Axios.get(
         "http://localhost:5000/totalPagar",
         {
           params: {
@@ -84,7 +86,6 @@ function ContasPagar({
           },
         }
       );
-      const jsonDataPagar = await [...responsePagar.data];
 
       let DetalhesApagar = {};
       DetalhesApagar["contasPagar"] = jsonDataPagar[0].total;

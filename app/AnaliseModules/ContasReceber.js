@@ -45,30 +45,19 @@ function ContasReceber({
   async function getContasReceberData() {
     try {
       // Get Receber Details
-      const responseTabela = await Axios.get(
-        "http://localhost:5000/receberTabela",
-        {
-          params: {
-            newBalanceDate,
-            currentBalanceDate,
-          },
-        }
-      );
-      const jsonDataReceber = await [...responseTabela.data];
+      const {
+        data: { totalAccReceivable: jsonDataReceber },
+        data: { totalAccReceivableDue: jsonRecAt },
+      } = await Axios.get("http://localhost:5000/receberDetails", {
+        params: {
+          newBalanceDate,
+          currentBalanceDate,
+        },
+      });
+
       const totalReceber = jsonDataReceber.reduce((a, b) => ({
         total: a.total + b.total,
       }));
-
-      const resRecAt = await Axios.get(
-        "http://localhost:5000/receberAtrasadas",
-        {
-          params: {
-            newBalanceDate,
-            currentBalanceDate,
-          },
-        }
-      );
-      const jsonRecAt = await [...resRecAt.data];
 
       let totAtrasadas = {};
       let detalhesReceber = {};

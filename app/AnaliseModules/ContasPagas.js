@@ -93,39 +93,28 @@ function ContasPagas({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
 
   async function getContasPagasData() {
     try {
-      const pagasByContas = await Axios.get(
-        "http://localhost:5000/pagasByContas",
-        {
-          params: {
-            currentBalanceDate: currentBalanceDate,
-            prevBalanceDate: prevBalanceDate,
-            newBalanceDate: newBalanceDate,
-          },
-        }
-      );
-
-      const pagasDetails = await Axios.get(
-        "http://localhost:5000/pagasByDescricao",
-        {
-          params: {
-            currentBalanceDate: currentBalanceDate,
-            prevBalanceDate: prevBalanceDate,
-            newBalanceDate: newBalanceDate,
-          },
-        }
-      );
+      const {
+        data: { billsByAccount },
+        data: { billsByDescription },
+      } = await Axios.get("http://localhost:5000/pagasDetails", {
+        params: {
+          currentBalanceDate: currentBalanceDate,
+          prevBalanceDate: prevBalanceDate,
+          newBalanceDate: newBalanceDate,
+        },
+      });
 
       let totalContasPgs = [];
 
       (function formatPagasByContas() {
-        for (let i = 0; i < pagasByContas.data.length; i++) {
+        for (let i = 0; i < billsByAccount.length; i++) {
           let datas = [];
           let valor = [];
-          datas = Object.keys(pagasByContas.data[i].json_object_agg);
-          valor = Object.values(pagasByContas.data[i].json_object_agg);
+          datas = Object.keys(billsByAccount[i].json_object_agg);
+          valor = Object.values(billsByAccount[i].json_object_agg);
 
           let pagasTemp = {};
-          pagasTemp["conta"] = pagasByContas.data[i].conta;
+          pagasTemp["conta"] = billsByAccount[i].conta;
 
           for (let j = 0; j < datas.length; j++) {
             let dtLabels = datas[j];
@@ -140,15 +129,15 @@ function ContasPagas({ prevBalanceDate, currentBalanceDate, newBalanceDate }) {
       let detailsPgs = [];
 
       (function formatContasObject() {
-        for (let i = 0; i < pagasDetails.data.length; i++) {
+        for (let i = 0; i < billsByDescription.length; i++) {
           let datas = [];
           let valor = [];
-          datas = Object.keys(pagasDetails.data[i].json_object_agg);
-          valor = Object.values(pagasDetails.data[i].json_object_agg);
+          datas = Object.keys(billsByDescription[i].json_object_agg);
+          valor = Object.values(billsByDescription[i].json_object_agg);
 
           let pagasDetalhesTemp = {};
-          pagasDetalhesTemp["conta"] = pagasDetails.data[i].conta;
-          pagasDetalhesTemp["descricao"] = pagasDetails.data[i].descricao;
+          pagasDetalhesTemp["conta"] = billsByDescription[i].conta;
+          pagasDetalhesTemp["descricao"] = billsByDescription[i].descricao;
 
           for (let j = 0; j < datas.length; j++) {
             let dateDetails = datas[j];

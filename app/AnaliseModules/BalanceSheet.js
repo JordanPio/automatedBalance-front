@@ -22,6 +22,7 @@ function BalanceSheet() {
     dadosPivot: [],
     totais: [],
     analysis: {},
+    analysisOrig: {},
     sendCount: 0,
     newBalDataUpdateCount: 0,
     isSaving: false,
@@ -111,145 +112,17 @@ function BalanceSheet() {
 
   async function getData() {
     try {
-      const getBalanceData = await fetch("http://localhost:5000/balance");
-      const jsonBalanceData = await getBalanceData.json(); // agg object!
-
-      let RefactoredBalanceData = [];
-      let balanceDates = [];
-      let balanceValues = [];
-      let TotalsPerAccount = [];
-      // let analysisPerPeriod = {};
-
-      (function refactorData() {
-        TotalsPerAccount["Ativo Circulante"] = {};
-        TotalsPerAccount["Ativo Permanente"] = {};
-        TotalsPerAccount["Ativo"] = {};
-        TotalsPerAccount["Passivo"] = {};
-        TotalsPerAccount["Passivo Circulante"] = {};
-        TotalsPerAccount["Passivo Exigivel a Longo Prazo"] = {};
-        TotalsPerAccount["Patrimonio Liquido"] = {};
-        TotalsPerAccount["Capital Social"] = {};
-        TotalsPerAccount["Lucro Exercicio"] = {};
-        TotalsPerAccount["DifAtivPassiv"] = {};
-
-        for (let i = 0; i < jsonBalanceData.length; i++) {
-          balanceDates = Object.keys(jsonBalanceData[i].json_object_agg);
-          balanceValues = Object.values(jsonBalanceData[i].json_object_agg);
-
-          let tempRefactBalData = {};
-          tempRefactBalData["conta"] = jsonBalanceData[i].conta;
-          tempRefactBalData["tipo"] = jsonBalanceData[i].tipo;
-
-          for (let j = 0; j < balanceDates.length; j++) {
-            let date = balanceDates[j];
-            let value = balanceValues[j];
-            tempRefactBalData[date] = value;
-
-            // // Initiate object for adding calculated totals
-            TotalsPerAccount["Ativo Circulante"][date] = 0;
-            TotalsPerAccount["Ativo Permanente"][date] = 0;
-            TotalsPerAccount["Ativo"][date] = 0;
-            TotalsPerAccount["Passivo"][date] = 0;
-            TotalsPerAccount["Passivo Circulante"][date] = 0;
-            TotalsPerAccount["Passivo Exigivel a Longo Prazo"][date] = 0;
-            TotalsPerAccount["Patrimonio Liquido"][date] = 0;
-            TotalsPerAccount["Capital Social"][date] = 0;
-            TotalsPerAccount["Lucro Exercicio"][date] = 0;
-            TotalsPerAccount["DifAtivPassiv"][date] = 0;
-          }
-
-          RefactoredBalanceData.push(tempRefactBalData);
-        }
-
-        // Calculating Totals in agg object
-        RefactoredBalanceData.forEach((items) => {
-          if (items.tipo === "Ativo Circulante") {
-            balanceDates.forEach((dt) => {
-              items[dt] !== undefined
-                ? (TotalsPerAccount["Ativo Circulante"][dt] =
-                    TotalsPerAccount["Ativo Circulante"][dt] + items[dt].f1)
-                : (TotalsPerAccount["Ativo Circulante"][dt] =
-                    TotalsPerAccount["Ativo Circulante"][dt] + 0);
-            });
-          } else if (items.tipo === "Ativo Permanente") {
-            balanceDates.forEach((dt) => {
-              TotalsPerAccount["Ativo Permanente"][dt] =
-                TotalsPerAccount["Ativo Permanente"][dt] + items[dt].f1;
-            });
-          } else if (items.tipo === "Passivo Circulante") {
-            balanceDates.forEach((dt) => {
-              if (items[dt] !== undefined) {
-                TotalsPerAccount["Passivo Circulante"][dt] =
-                  TotalsPerAccount["Passivo Circulante"][dt] + items[dt].f1;
-              } else {
-                TotalsPerAccount["Passivo Circulante"][dt] =
-                  TotalsPerAccount["Passivo Circulante"][dt] + 0;
-              }
-            });
-          } else if (
-            items.tipo === "Patrimonio Liquido" ||
-            items.tipo === "Profit Loss"
-          ) {
-            balanceDates.forEach((dt) => {
-              if (items[dt] !== undefined) {
-                TotalsPerAccount["Patrimonio Liquido"][dt] =
-                  TotalsPerAccount["Patrimonio Liquido"][dt] + items[dt].f1;
-                if (items.conta === "Lucro Prejuizo do Exercicio") {
-                  TotalsPerAccount["Lucro Exercicio"][dt] =
-                    TotalsPerAccount["Lucro Exercicio"][dt] + items[dt].f1;
-                }
-              } else {
-                TotalsPerAccount["Patrimonio Liquido"][dt] =
-                  TotalsPerAccount["Patrimonio Liquido"][dt] + 0;
-
-                if (items.conta === "Lucro Prejuizo do Exercicio") {
-                  TotalsPerAccount["Lucro Exercicio"][dt] =
-                    TotalsPerAccount["Lucro Exercicio"][dt] + 0;
-                }
-              }
-            });
-          } else if (items.tipo === "Passivo Exigivel a Longo Prazo") {
-            balanceDates.forEach((dt) => {
-              if (items[dt] !== undefined) {
-                TotalsPerAccount["Passivo Exigivel a Longo Prazo"][dt] =
-                  TotalsPerAccount["Passivo Exigivel a Longo Prazo"][dt] +
-                  items[dt].f1;
-              } else {
-                TotalsPerAccount["Passivo Exigivel a Longo Prazo"][dt] =
-                  TotalsPerAccount["Passivo Exigivel a Longo Prazo"][dt] + 0;
-              }
-            });
-          }
-        });
-
-        balanceDates.forEach((dt) => {
-          TotalsPerAccount["Ativo"][dt] =
-            TotalsPerAccount["Ativo Circulante"][dt] +
-            TotalsPerAccount["Ativo Permanente"][dt];
-          TotalsPerAccount["Passivo"][dt] =
-            TotalsPerAccount["Patrimonio Liquido"][dt] +
-            TotalsPerAccount["Passivo Circulante"][dt] +
-            TotalsPerAccount["Passivo Exigivel a Longo Prazo"][dt];
-          TotalsPerAccount["DifAtivPassiv"][dt] =
-            TotalsPerAccount["Ativo"][dt] - TotalsPerAccount["Passivo"][dt];
-        });
-      })();
-
-      const uniqDates = balanceDates.map((items) => {
-        return { id: genRandomId(), data: items, select: true };
-      });
-
-      // // Update state to pass to other components
-      let currentBalanceDate = uniqDates.slice(-1)[0];
-      let prevBalanceDate = uniqDates.slice(-2)[0];
+      const { data: balanceData } = await Axios.get(
+        "http://localhost:5000/balance"
+      );
 
       await setState((draft) => {
-        draft.dates = uniqDates;
-        draft.dadosPivot = RefactoredBalanceData;
-        draft.totais = TotalsPerAccount;
-        // draft.analysis = analysisPerPeriod;
-        draft.currentBalanceDate = currentBalanceDate;
-        draft.prevBalanceDate = prevBalanceDate;
+        draft.dates = balanceData.dates;
+        draft.dadosPivot = balanceData.dadosPivot;
+        draft.totais = balanceData.totais;
+        draft.analysisOrig = balanceData.analysisPerPeriod;
+        draft.currentBalanceDate = balanceData.currentBalanceDate;
+        draft.prevBalanceDate = balanceData.prevBalanceDate;
       });
     } catch (error) {
       console.error(error.message);
@@ -393,73 +266,129 @@ function BalanceSheet() {
   }
 
   function analysisTableData() {
-    // // Calculated Data
-    // console.log(state.totais, "totais")
-    let analysisPerPeriod = {};
-
-    let datas = [];
+    // // // Calculated Data
+    // // console.log(state.totais, "totais")
+    // let analysisPerPeriod = {};
+    let selectedDates = [];
+    // let tempAnalysis = state.analysis;
     state.dates.forEach((dt, i, ar) => {
-      if (dt.select === true) {
-        return datas.push(dt);
+      if (dt.select === false) {
+        return selectedDates.push(dt);
       } else {
         return null;
       }
     });
 
-    // Initiate Objects
-    let circulante = {};
-    let crescPeriodo = {};
-    let liquidezGeral = {};
-    let mesPeriodo = {};
-    let lucroMensal = {};
-    for (let i = datas.length - 1; i >= 0; i--) {
-      if (datas[i].select === true && datas[i - 1] !== undefined) {
-        circulante[datas[i].data] =
-          state.totais["Ativo Circulante"][datas[i].data] /
-          state.totais["Passivo Circulante"][datas[i].data];
-        crescPeriodo[datas[i].data] =
-          state.totais["Lucro Exercicio"][datas[i].data];
-        liquidezGeral[datas[i].data] =
-          state.totais["Ativo"][datas[i].data] /
-          state.totais["Passivo Circulante"][datas[i].data];
+    // console.log(selectedDates);
+    // console.log(state.analysis);
 
-        // // qtde meses que passou entre periodo
-        (function calcProfitPeriod() {
-          const d1Y = new Date(datas[i].data).getFullYear();
-          const d2Y = new Date(datas[i - 1].data).getFullYear();
-          const d1M = new Date(datas[i].data).getMonth();
-          const d2M = new Date(datas[i - 1].data).getMonth();
+    // const updatedAnalysis = Object.key(state.analysis.circulante)
 
-          mesPeriodo[datas[i].data] = d1M + 12 * d1Y - (d2M + 12 * d2Y);
-          lucroMensal[datas[i].data] =
-            crescPeriodo[datas[i].data] / mesPeriodo[datas[i].data];
-        })();
+    // Object.keys(state.analysis.circulante).map((dates) => {
+    //   console.log(dates);
+    // });
 
-        // Cover edge case for first balance (As we dont have the data anymore)
-      } else if (datas[i].select === true) {
-        circulante[datas[i].data] =
-          state.totais["Ativo Circulante"][datas[i].data] /
-          state.totais["Passivo Circulante"][datas[i].data];
-        crescPeriodo[datas[i].data] =
-          state.totais["Lucro Exercicio"][datas[i].data];
-        liquidezGeral[datas[i].data] =
-          state.totais["Ativo"][datas[i].data] /
-          state.totais["Passivo Circulante"][datas[i].data];
+    let tempDate = state.dates;
+    let tempAnalysis = JSON.parse(JSON.stringify(state.analysisOrig));
 
-        mesPeriodo[datas[i].data] = 22;
-        lucroMensal[datas[i].data] =
-          crescPeriodo[datas[i].data] / mesPeriodo[datas[i].data];
+    // console.log(tempAnalysis, "Deep coPY");
+    // tempAnalysis.circulante["2021-04-18"] = 0;
+
+    for (let i = 0; i < tempDate.length; i++) {
+      // console.log(data);
+
+      if (
+        (tempDate[i].select === false && !tempDate[i - 1]) ||
+        (tempDate[i].select === false && !tempDate[i + 1])
+      ) {
+        continue;
+      } else if (tempDate[i].select === false && tempDate[i + 1]) {
+        let currentDate = tempDate[i].data;
+        let nextDate = tempDate[i + 1].data;
+
+        tempAnalysis.mesPeriodo[nextDate] =
+          tempAnalysis.mesPeriodo[nextDate] +
+          tempAnalysis.mesPeriodo[currentDate];
+
+        tempAnalysis.crescPeriodo[nextDate] =
+          tempAnalysis.crescPeriodo[nextDate] +
+          tempAnalysis.crescPeriodo[currentDate];
+
+        tempAnalysis.lucroMensal[nextDate] =
+          tempAnalysis.crescPeriodo[nextDate] /
+          tempAnalysis.mesPeriodo[currentDate];
+
+        // console.log(tempAnalysis.lucroMensal[nextDate]);
+      } else if (tempDate[i].select === false && tempDate[i - 1]) {
+        let currentDate = tempDate[i].data;
+        let prevDate = tempDate[i - 1].data;
+
+        tempAnalysis.mesPeriodo[prevDate] =
+          tempAnalysis.mesPeriodo[prevDate] +
+          tempAnalysis.mesPeriodo[currentDate];
+
+        tempAnalysis.crescPeriodo[prevDate] =
+          tempAnalysis.crescPeriodo[prevDate] +
+          tempAnalysis.crescPeriodo[currentDate];
+
+        tempAnalysis.lucroMensal[prevDate] =
+          tempAnalysis.crescPeriodo[prevDate] /
+          tempAnalysis.mesPeriodo[currentDate];
       }
     }
-    analysisPerPeriod.circulante = circulante;
-    analysisPerPeriod.crescPeriodo = crescPeriodo;
-    analysisPerPeriod.liquidezGeral = liquidezGeral;
-    analysisPerPeriod.mesPeriodo = mesPeriodo;
-    analysisPerPeriod.lucroMensal = lucroMensal;
-
     setState((draft) => {
-      draft.analysis = analysisPerPeriod;
+      draft.analysis = tempAnalysis;
     });
+    // // Initiate Objects
+    // let circulante = {};
+    // let crescPeriodo = {};
+    // let liquidezGeral = {};
+    // let mesPeriodo = {};
+    // let lucroMensal = {};
+    // for (let i = datas.length - 1; i >= 0; i--) {
+    //   if (datas[i].select === true && datas[i - 1] !== undefined) {
+    //     circulante[datas[i].data] =
+    //       state.totais["Ativo Circulante"][datas[i].data] /
+    //       state.totais["Passivo Circulante"][datas[i].data];
+    //     crescPeriodo[datas[i].data] =
+    //       state.totais["Lucro Exercicio"][datas[i].data];
+    //     liquidezGeral[datas[i].data] =
+    //       state.totais["Ativo"][datas[i].data] /
+    //       state.totais["Passivo Circulante"][datas[i].data];
+    //     // // qtde meses que passou entre periodo
+    //     (function calcProfitPeriod() {
+    //       const d1Y = new Date(datas[i].data).getFullYear();
+    //       const d2Y = new Date(datas[i - 1].data).getFullYear();
+    //       const d1M = new Date(datas[i].data).getMonth();
+    //       const d2M = new Date(datas[i - 1].data).getMonth();
+    //       mesPeriodo[datas[i].data] = d1M + 12 * d1Y - (d2M + 12 * d2Y);
+    //       lucroMensal[datas[i].data] =
+    //         crescPeriodo[datas[i].data] / mesPeriodo[datas[i].data];
+    //     })();
+    //     // Cover edge case for first balance (As we dont have the data anymore)
+    //   } else if (datas[i].select === true) {
+    //     circulante[datas[i].data] =
+    //       state.totais["Ativo Circulante"][datas[i].data] /
+    //       state.totais["Passivo Circulante"][datas[i].data];
+    //     crescPeriodo[datas[i].data] =
+    //       state.totais["Lucro Exercicio"][datas[i].data];
+    //     liquidezGeral[datas[i].data] =
+    //       state.totais["Ativo"][datas[i].data] /
+    //       state.totais["Passivo Circulante"][datas[i].data];
+    //     mesPeriodo[datas[i].data] = 22;
+    //     lucroMensal[datas[i].data] =
+    //       crescPeriodo[datas[i].data] / mesPeriodo[datas[i].data];
+    //   }
+    // }
+    // analysisPerPeriod.circulante = circulante;
+    // analysisPerPeriod.crescPeriodo = crescPeriodo;
+    // analysisPerPeriod.liquidezGeral = liquidezGeral;
+    // analysisPerPeriod.mesPeriodo = mesPeriodo;
+    // analysisPerPeriod.lucroMensal = lucroMensal;
+    // setState((draft) => {
+    //   draft.analysis = analysisPerPeriod;
+    // });
+    // console.log(analysisPerPeriod);
   }
 
   function onChangeCheckBox(e) {

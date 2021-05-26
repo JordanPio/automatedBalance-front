@@ -1,50 +1,41 @@
 import React, { useEffect } from "react";
-import Page from "../components/Page";
 import Axios from "axios";
-// import { parse } from "date-fns";
 import { useImmer } from "use-immer";
 import { useParams, withRouter } from "react-router-dom";
 
-// import StateContext from "../StateContext";
-// import DispatchContext from "../DispatchContext";
-// import { Link } from "react-router-dom";
-
-// const dtConvert = require("date-fns");
-
 function EditBalance(props) {
   const [state, setState] = useImmer({
-    newSet: {},
     sendCount: 0,
     isSaving: false,
-    dados: [],
+    balanceData: [],
     changes: {},
-    date: useParams().id
+    date: useParams().id,
   });
-
-  // generate IDs
-  // const uid = function () {
-  //   return Date.now().toString(36) + Math.random().toString(36).substr(2);
-  // };
 
   function submitHandler(e) {
     e.preventDefault();
-    setState(draft => {
+    setState((draft) => {
       draft.sendCount++;
     });
   }
 
   async function deleteHandler() {
-    const areYouSure = window.confirm("Do you really want to delete this balance?");
+    const areYouSure = window.confirm(
+      "Do you really want to delete this balance?"
+    );
     if (areYouSure) {
       try {
-        const response = await Axios.delete("http://localhost:5000/delBalance", {
-          headers: {
-            Authorization: true
-          },
-          data: {
-            date: state.date
+        const response = await Axios.delete(
+          "http://localhost:5000/delBalance",
+          {
+            headers: {
+              Authorization: true,
+            },
+            data: {
+              date: state.date,
+            },
           }
-        });
+        );
         if (response.data === "Success") {
           // 1. display a flash msg
           // appDispatch({ type: "flashMessage", value: "Balance was succesfully deleted" });
@@ -73,33 +64,26 @@ function EditBalance(props) {
   useEffect(() => {
     const getData = async () => {
       try {
-        //get Balance Data
-        const response = await Axios.get("http://localhost:5000/edit", {
-          params: {
-            date: state.date
+        const { data: balanceData } = await Axios.get(
+          "http://localhost:5000/edit",
+          {
+            params: {
+              date: state.date,
+            },
           }
-        });
-        const jsonData = await [...response.data];
+        );
 
-        // console.log(jsonData);
-
-        let newObj = {};
-        let newSet = [];
-        for (let i = 0; i < jsonData.length; i++) {
-          // console.log(jsonData[i])
-          newObj[jsonData[i].id] = jsonData[i];
-          newObj[jsonData[i].id]["index"] = i;
-          newSet.push(jsonData[i]);
-          // newSet.push(jsonData[i])
+        let tempObj = {};
+        let refactBalanceData = [];
+        for (let i = 0; i < balanceData.length; i++) {
+          tempObj[balanceData[i].id] = balanceData[i];
+          tempObj[balanceData[i].id]["index"] = i;
+          refactBalanceData.push(balanceData[i]);
         }
-        // set contas
-        // console.log(newSet);
 
-        setState(draft => {
-          draft.dados = newSet;
-          draft.newSet = newObj;
+        setState((draft) => {
+          draft.balanceData = refactBalanceData;
         });
-        // console.log(newSet);
       } catch (error) {
         console.error(error.message);
       }
@@ -109,44 +93,47 @@ function EditBalance(props) {
 
   useEffect(() => {
     if (state.sendCount) {
-      setState(draft => {
+      setState((draft) => {
         draft.isSaving = true;
       });
-      // const ourRequest = Axios.CancelToken.source();
-      // console.log(state.changes);
       async function updateBalance() {
         try {
-          const response = await Axios.post("http://localhost:5000/updateBalance", { data: state.changes });
-          setState(draft => {
+          const response = await Axios.post(
+            "http://localhost:5000/updateBalance",
+            { data: state.changes }
+          );
+          setState((draft) => {
             draft.isSaving = false;
           });
           // appDispatch({ type: "flashMessage", value: "Post was updated." });
           console.log(response.data);
-          // props.history.goBack();
           props.history.push(`/`);
-          // window.location.reload(); // works like a charm but its reloading the page SOLUTION 1
         } catch (error) {
           console.log("There was an error");
         }
       }
       updateBalance();
-      // return () => {
-      //   ourRequest.cancel();
-      // };
     }
   }, [state.sendCount]);
 
   return (
     <div title="Edit Balance" className="mx-auto">
-      <h3 className="text-center p-5">Atualizar Balanco {`${new Date(state.date).getDate()}/${new Date(state.date).getMonth() + 1}/${new Date(state.date).getFullYear()}`}</h3>
+      <h3 className="text-center p-5">
+        Atualizar Balanco{" "}
+        {`${new Date(state.date).getDate()}/${
+          new Date(state.date).getMonth() + 1
+        }/${new Date(state.date).getFullYear()}`}
+      </h3>
 
       {/* <div className="container"> */}
       <form onSubmit={submitHandler} className="text-center">
         <div className="form-group ">
           <div className="row">
             <div className="col">
-              <h4 className="form-inline mx-3 font-weight-bold">Ativo Circulante</h4>
-              {state.dados.map((items, itemsIndex) => {
+              <h4 className="form-inline mx-3 font-weight-bold">
+                Ativo Circulante
+              </h4>
+              {state.balanceData.map((items, itemsIndex) => {
                 if (items.tipo === "Ativo Circulante") {
                   return (
                     <div key={items.id} className="form-inline">
@@ -158,15 +145,17 @@ function EditBalance(props) {
                         id={items.id}
                         value={items.total}
                         index={items.index}
-                        onChange={e => {
+                        onChange={(e) => {
                           let inputValue = e.target.value;
                           let itemId = parseInt(e.target.id, 10);
-                          if (state.dados[itemsIndex].total !== inputValue) {
-                            setState(draft => {
-                              draft.dados[itemsIndex].total = inputValue;
+                          if (
+                            state.balanceData[itemsIndex].total !== inputValue
+                          ) {
+                            setState((draft) => {
+                              draft.balanceData[itemsIndex].total = inputValue;
                             });
                             // console.log(state.dados[itemsIndex].id, inputValue)
-                            setState(draft => {
+                            setState((draft) => {
                               draft.changes[itemId] = parseFloat(inputValue);
                             });
                           }
@@ -180,8 +169,10 @@ function EditBalance(props) {
               })}
 
               {/* Ativo Permanente */}
-              <h4 className="form-inline mx-3 font-weight-bold">Ativo Permanente</h4>
-              {state.dados.map((items, itemsIndex) => {
+              <h4 className="form-inline mx-3 font-weight-bold">
+                Ativo Permanente
+              </h4>
+              {state.balanceData.map((items, itemsIndex) => {
                 if (items.tipo === "Ativo Permanente") {
                   return (
                     <div key={items.id} className="form-inline">
@@ -193,15 +184,17 @@ function EditBalance(props) {
                         id={items.id}
                         value={items.total}
                         index={items.index}
-                        onChange={e => {
+                        onChange={(e) => {
                           let inputValue = e.target.value;
                           let itemId = parseInt(e.target.id, 10);
-                          if (state.dados[itemsIndex].total !== inputValue) {
-                            setState(draft => {
-                              draft.dados[itemsIndex].total = inputValue;
+                          if (
+                            state.balanceData[itemsIndex].total !== inputValue
+                          ) {
+                            setState((draft) => {
+                              draft.balanceData[itemsIndex].total = inputValue;
                             });
                             // console.log(state.dados[itemsIndex].id, inputValue)
-                            setState(draft => {
+                            setState((draft) => {
                               draft.changes[itemId] = parseFloat(inputValue);
                             });
                           }
@@ -217,8 +210,10 @@ function EditBalance(props) {
 
             {/* // Contas Passivo */}
             <div className="col">
-              <h4 className="form-inline mx-3 mt-3 font-weight-bold">Contas Passivo</h4>
-              {state.dados.map((items, itemsIndex) => {
+              <h4 className="form-inline mx-3 mt-3 font-weight-bold">
+                Contas Passivo
+              </h4>
+              {state.balanceData.map((items, itemsIndex) => {
                 if (items.tipo.includes("Passivo Circulante")) {
                   return (
                     <div key={items.id} className="form-inline">
@@ -230,15 +225,17 @@ function EditBalance(props) {
                         id={items.id}
                         value={items.total}
                         index={items.index}
-                        onChange={e => {
+                        onChange={(e) => {
                           let inputValue = e.target.value;
                           let itemId = parseInt(e.target.id, 10);
-                          if (state.dados[itemsIndex].total !== inputValue) {
-                            setState(draft => {
-                              draft.dados[itemsIndex].total = inputValue;
+                          if (
+                            state.balanceData[itemsIndex].total !== inputValue
+                          ) {
+                            setState((draft) => {
+                              draft.balanceData[itemsIndex].total = inputValue;
                             });
                             // console.log(state.dados[itemsIndex].id, inputValue)
-                            setState(draft => {
+                            setState((draft) => {
                               draft.changes[itemId] = parseFloat(inputValue);
                             });
                           }
@@ -252,8 +249,10 @@ function EditBalance(props) {
               })}
 
               {/* Exigivel Longo Prazo */}
-              <h4 className="form-inline mx-3 mt-3 font-weight-bold">Exigivel Longo Prazo</h4>
-              {state.dados.map((items, itemsIndex) => {
+              <h4 className="form-inline mx-3 mt-3 font-weight-bold">
+                Exigivel Longo Prazo
+              </h4>
+              {state.balanceData.map((items, itemsIndex) => {
                 if (items.tipo.includes("Passivo Exigivel")) {
                   return (
                     <div key={items.id} className="form-inline">
@@ -265,15 +264,17 @@ function EditBalance(props) {
                         id={items.id}
                         value={items.total}
                         index={items.index}
-                        onChange={e => {
+                        onChange={(e) => {
                           let inputValue = e.target.value;
                           let itemId = parseInt(e.target.id, 10);
-                          if (state.dados[itemsIndex].total !== inputValue) {
-                            setState(draft => {
-                              draft.dados[itemsIndex].total = inputValue;
+                          if (
+                            state.balanceData[itemsIndex].total !== inputValue
+                          ) {
+                            setState((draft) => {
+                              draft.balanceData[itemsIndex].total = inputValue;
                             });
                             // console.log(state.dados[itemsIndex].id, inputValue)
-                            setState(draft => {
+                            setState((draft) => {
                               draft.changes[itemId] = parseFloat(inputValue);
                             });
                           }
@@ -287,8 +288,10 @@ function EditBalance(props) {
               })}
 
               {/* // Contas Patrimonio */}
-              <h4 className="form-inline mx-3 mt-3 font-weight-bold">Contas Patrimonio</h4>
-              {state.dados.map((items, itemsIndex) => {
+              <h4 className="form-inline mx-3 mt-3 font-weight-bold">
+                Contas Patrimonio
+              </h4>
+              {state.balanceData.map((items, itemsIndex) => {
                 if (items.tipo.includes("Patrimonio")) {
                   return (
                     <div key={items.id} className="form-inline">
@@ -300,15 +303,17 @@ function EditBalance(props) {
                         id={items.id}
                         value={items.total}
                         index={items.index}
-                        onChange={e => {
+                        onChange={(e) => {
                           let inputValue = e.target.value;
                           let itemId = parseInt(e.target.id, 10);
-                          if (state.dados[itemsIndex].total !== inputValue) {
-                            setState(draft => {
-                              draft.dados[itemsIndex].total = inputValue;
+                          if (
+                            state.balanceData[itemsIndex].total !== inputValue
+                          ) {
+                            setState((draft) => {
+                              draft.balanceData[itemsIndex].total = inputValue;
                             });
                             // console.log(state.dados[itemsIndex].id, inputValue)
-                            setState(draft => {
+                            setState((draft) => {
                               draft.changes[itemId] = parseFloat(inputValue);
                             });
                           }
@@ -322,8 +327,10 @@ function EditBalance(props) {
               })}
 
               {/* // Contas Patrimonio */}
-              <h3 className="form-inline mx-3 mt-3 font-weight-bold">Lucro / Prejuizo</h3>
-              {state.dados.map((items, itemsIndex) => {
+              <h3 className="form-inline mx-3 mt-3 font-weight-bold">
+                Lucro / Prejuizo
+              </h3>
+              {state.balanceData.map((items, itemsIndex) => {
                 if (items.tipo.includes("Profit")) {
                   return (
                     <div key={items.id} className="form-inline">
@@ -335,15 +342,17 @@ function EditBalance(props) {
                         id={items.id}
                         value={items.total}
                         index={items.index}
-                        onChange={e => {
+                        onChange={(e) => {
                           let inputValue = e.target.value;
                           let itemId = parseInt(e.target.id, 10);
-                          if (state.dados[itemsIndex].total !== inputValue) {
-                            setState(draft => {
-                              draft.dados[itemsIndex].total = inputValue;
+                          if (
+                            state.balanceData[itemsIndex].total !== inputValue
+                          ) {
+                            setState((draft) => {
+                              draft.balanceData[itemsIndex].total = inputValue;
                             });
                             // console.log(state.dados[itemsIndex].id, inputValue)
-                            setState(draft => {
+                            setState((draft) => {
                               draft.changes[itemId] = parseFloat(inputValue);
                             });
                           }
@@ -364,7 +373,10 @@ function EditBalance(props) {
         <button className="btn btn-primary mb-4" disabled={state.isSaving}>
           Save Updates
         </button>
-        <button className="btn btn-danger ml-4 mb-4 text-center" onClick={deleteHandler}>
+        <button
+          className="btn btn-danger ml-4 mb-4 text-center"
+          onClick={deleteHandler}
+        >
           Delete
         </button>
       </form>
